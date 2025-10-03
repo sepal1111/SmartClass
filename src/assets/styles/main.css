@@ -1,0 +1,10 @@
+/* /src/assets/styles/main.css */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+body {
+  /* 您可以在此處添加全域的基礎樣式 */
+  font-family: 'Inter', 'Noto Sans TC', sans-serif;
+}
+

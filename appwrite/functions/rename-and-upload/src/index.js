@@ -2,26 +2,42 @@
 /*
   'req' variable has:
     'headers' - object with request headers
-    'payload' - object with request body
+    'payload' - request body data as a string
     'variables' - object with function variables
 
   'res' variable has:
     'send(text, status)' - function to return text response. Status code defaults to 200
     'json(obj, status)' - function to return JSON response. Status code defaults to 200
 
-  In production, you can safely remove the console.log() statement.
+  If an error is thrown, a response with status 500 will be returned.
 */
+
 module.exports = async (req, res) => {
-  console.log('rename-and-upload function was triggered.');
-  
-  // TODO:
-  // 1. 從 req.variables 取得 Google API 密鑰與教師的 Access Token。
-  // 2. 從 req.payload 取得檔案、學生資訊、目標資料夾 ID。
-  // 3. 實作 Google Drive API 的檔案上傳與重新命名邏輯。
-  // 4. 回傳成功或失敗的 JSON 結果。
+  // const client = new Client();
+
+  // You can remove services you don't use
+  // const account = new Account(client);
+  // const avatars = new Avatars(client);
+  // const database = new Databases(client);
+  // const functions = new Functions(client);
+  // const health = new Health(client);
+  // const locale = new Locale(client);
+  // const storage = new Storage(client);
+  // const teams = new Teams(client);
+  // const users = new Users(client);
+
+  if (!req.variables['APPWRITE_FUNCTION_ENDPOINT'] || !req.variables['APPWRITE_FUNCTION_API_KEY']) {
+    console.warn("Environment variables are not set. Function cannot use Appwrite SDK.");
+  } else {
+    // client
+    //   .setEndpoint(req.variables['APPWRITE_FUNCTION_ENDPOINT'])
+    //   .setProject(req.variables['APPWRITE_FUNCTION_PROJECT_ID'])
+    //   .setKey(req.variables['APPWRITE_FUNCTION_API_KEY'])
+    //   .setSelfSigned(true);
+  }
 
   res.json({
-    success: true,
-    message: 'Function executed. Awaiting full implementation.',
+    message: "後端函式尚未實作"
   });
 };
+

@@ -1,28 +1,19 @@
 <!-- /src/components/layout/Sidebar.vue -->
 <template>
-  <aside class="w-64 flex-shrink-0 bg-white shadow-md hidden md:block">
-    <div class="p-6">
-      <h1 class="text-2xl font-bold text-indigo-600">智慧班級平台</h1>
+  <div class="w-64 bg-gray-800 text-white flex flex-col">
+    <div class="h-16 flex items-center justify-center text-2xl font-bold">
+      智慧班級平台
     </div>
-    <nav class="mt-6">
-      <router-link v-for="item in menuItems" :key="item.name" :to="item.path"
-        class="flex items-center px-6 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-200"
-        active-class="bg-indigo-100 text-indigo-700 font-semibold border-r-4 border-indigo-500">
-        <span>{{ item.label }}</span>
-      </router-link>
+    <nav class="flex-1 px-2 py-4 space-y-2">
+      <router-link to="/dashboard" class="block px-4 py-2 rounded hover:bg-gray-700">儀表板</router-link>
+      <router-link to="/students" class="block px-4 py-2 rounded hover:bg-gray-700">學生管理</router-link>
+      <router-link to="/seating-chart" class="block px-4 py-2 rounded hover:bg-gray-700">座位表</router-link>
+      <router-link to="/attendance" class="block px-4 py-2 rounded hover:bg-gray-700">每日出缺席</router-link>
+      <router-link to="/curriculum" class="block px-4 py-2 rounded hover:bg-gray-700">課程管理</router-link>
+      <router-link to="/grades" class="block px-4 py-2 rounded hover:bg-gray-700">成績紀錄</router-link>
+      <router-link to="/submissions" class="block px-4 py-2 rounded hover:bg-gray-700">數位作品繳交</router-link>
+      <router-link to="/ping-pong" class="block px-4 py-2 rounded hover:bg-gray-700">互動功能</router-link>
     </nav>
-  </aside>
+  </div>
 </template>
 
-<script setup>
-const menuItems = [
-  { name: 'Dashboard', path: '/', label: '儀表板' },
-  { name: 'StudentManagement', path: '/student-management', label: '學生管理' },
-  { name: 'SeatingChart', path: '/seating-chart', label: '座位表' },
-  { name: 'Attendance', path: '/attendance', label: '每日出缺席' },
-  { name: 'Curriculum', path: '/curriculum', label: '課程管理' },
-  { name: 'Grades', path: '/grades', label: '成績紀錄' },
-  { name: 'Submissions', path: '/submissions', label: '數位作品繳交' },
-  { name: 'PingPong', path: '/ping-pong', label: '互動功能' },
-];
-</script>
