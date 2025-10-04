@@ -1,7 +1,9 @@
 <!-- /src/views/Attendance.vue -->
 <template>
-  <div class="container mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-gray-800">每日出缺席</h1>
-    <p class="text-lg text-gray-600">此處將會放置與座位表結合的出缺席快速登記功能。</p>
+  <div>
+    <h2 class="text-2xl font-bold text-gray-800">每日出缺席</h2>
+    <p class="mt-2 text-gray-600">這裡是每日出缺席管理頁面。</p>
+    <!-- 功能將在後續階段開發 -->
   </div>
 </template>
+

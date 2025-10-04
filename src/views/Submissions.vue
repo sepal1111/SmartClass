@@ -1,7 +1,9 @@
 <!-- /src/views/Submissions.vue -->
 <template>
-  <div class="container mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-gray-800">數位作品繳交</h1>
-    <p class="text-lg text-gray-600">此處將會放置與 Google Drive 整合的作業繳交系統。</p>
+  <div>
+    <h2 class="text-2xl font-bold text-gray-800">數位作品繳交</h2>
+    <p class="mt-2 text-gray-600">這裡是數位作品繳交管理頁面。</p>
+    <!-- 功能將在後續階段開發 -->
   </div>
 </template>
+

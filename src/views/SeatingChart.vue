@@ -1,7 +1,9 @@
-<!-- /src/views/                                                                                                                 -->
+<!-- /src/views/SeatingChart.vue -->
 <template>
-  <div class="container mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-gray-800">座位表</h1>
-    <p class="text-lg text-gray-600">此處將會放置視覺化的座位表編輯器。</p>
+  <div>
+    <h2 class="text-2xl font-bold text-gray-800">座位表管理</h2>
+    <p class="mt-2 text-gray-600">這裡是座位表編輯頁面。</p>
+    <!-- 功能將在後續階段開發 -->
   </div>
 </template>
+

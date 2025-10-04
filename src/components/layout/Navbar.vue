@@ -1,26 +1,29 @@
 <!-- /src/components/layout/Navbar.vue -->
 <template>
-  <header class="h-16 bg-white shadow-md flex items-center justify-between px-6">
+  <header class="bg-white shadow-md p-4 flex justify-between items-center">
+    <h1 class="text-xl font-semibold text-gray-700">智慧班級管理平台</h1>
     <div>
-      <h1 v-if="user" class="text-xl font-semibold">歡迎回來, {{ user.name }}！</h1>
-    </div>
-    <div>
-      <!-- **重要修正**: 直接呼叫從 store 取得的 logout 函式 -->
-      <button @click="logout" class="text-gray-600 hover:text-gray-800">登出</button>
+      <span class="text-gray-600 mr-4">歡迎，王老師</span>
+      <button @click="logout" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+        登出
+      </button>
     </div>
   </header>
 </template>
 
 <script setup>
-import { storeToRefs } from 'pinia';
-import { useAuth } from '../../store/auth';
+import { useRouter } from 'vue-router';
+// 之後會在這裡引入 Pinia 的 auth store 來處理登出邏輯
+// import { useAuthStore } from '@/store/auth';
 
-const authStore = useAuth();
-// 使用 storeToRefs 確保 user 保持響應性
-const { user } = storeToRefs(authStore);
-// 直接從 store 解構 logout 函式
-const { logout } = authStore;
+const router = useRouter();
+// const authStore = useAuthStore();
 
-// 已不再需要 handleLogout 和 useRouter
+const logout = () => {
+  console.log('執行登出...');
+  // 之後會取消註解
+  // authStore.logout();
+  router.push('/login');
+};
 </script>
 

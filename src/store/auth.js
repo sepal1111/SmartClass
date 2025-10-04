@@ -1,60 +1,59 @@
 // /src/store/auth.js
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import { account } from '../services/appwrite';
-import router from '../router'; // 引入 router
+import { ref, computed } from 'vue';
+import { auth } from '@/services/firebase';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut,
+  onAuthStateChanged
+} from "firebase/auth";
 
-export const useAuth = defineStore('auth', () => {
+export const useAuthStore = defineStore('auth', () => {
   const user = ref(null);
-  const isLoading = ref(true);
-  const isLoggedIn = ref(false);
 
-  const checkAuthStatus = async () => {
-    isLoading.value = true;
-    try {
-      const currentUser = await account.get();
-      user.value = currentUser;
-      isLoggedIn.value = true;
-    } catch (error) {
-      user.value = null;
-      isLoggedIn.value = false;
-    } finally {
-      isLoading.value = false;
-    }
-  };
+  const isAuthenticated = computed(() => !!user.value);
+  const userEmail = computed(() => user.value?.email);
 
-  const login = async (email, password) => {
+  // 監聽 Firebase 認證狀態變化
+  onAuthStateChanged(auth, (firebaseUser) => {
+    user.value = firebaseUser;
+  });
+
+  // 註冊
+  async function register(email, password) {
     try {
-      await account.createEmailSession(email, password);
-      await checkAuthStatus();
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      user.value = userCredential.user;
       return true;
     } catch (error) {
-      console.error('登入失敗:', error);
+      console.error("註冊失敗:", error.message);
       return false;
     }
-  };
+  }
 
-  // 登出邏輯
-  const logout = async () => {
+  // 登入
+  async function login(email, password) {
     try {
-      await account.deleteSession('current');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      user.value = userCredential.user;
+      return true;
     } catch (error) {
-      console.error('登出 API 呼叫失敗:', error);
-    } finally {
-      // 無論 API 成功或失敗，都強制清理前端狀態並導向登入頁
-      user.value = null;
-      isLoggedIn.value = false;
-      router.push({ name: 'Login' });
+      console.error("登入失敗:", error.message);
+      return false;
     }
-  };
+  }
+  
+  // 登出
+  async function logout() {
+    try {
+      await signOut(auth);
+      user.value = null;
+    } catch (error) {
+      console.error("登出失敗:", error.message);
+    }
+  }
 
-  return {
-    user,
-    isLoading,
-    isLoggedIn,
-    checkAuthStatus,
-    login,
-    logout,
-  };
+  return { user, isAuthenticated, userEmail, register, login, logout };
 });
 

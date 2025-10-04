@@ -1,12 +1,9 @@
 <!-- /src/views/Dashboard.vue -->
 <template>
-  <div class="container mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-gray-800">儀表板</h1>
-    <p class="text-lg text-gray-600">歡迎使用智慧班級管理平台！</p>
-    <!-- 未來可在此處加入常用功能捷徑、待辦事項、最新公告等 -->
+  <div>
+    <h2 class="text-2xl font-bold text-gray-800">主控台</h2>
+    <p class="mt-2 text-gray-600">歡迎來到智慧班級管理平台！</p>
+    <!-- 之後可以放置一些常用功能捷徑或公告 -->
   </div>
 </template>
 
-<script setup>
-// Dashboard 頁面的邏輯
-</script>

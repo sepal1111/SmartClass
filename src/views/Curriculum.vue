@@ -1,7 +1,9 @@
 <!-- /src/views/Curriculum.vue -->
 <template>
-  <div class="container mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-gray-800">課程管理</h1>
-    <p class="text-lg text-gray-600">此處將會放置課程的新增、編輯、更新、刪除 (CRUD) 功能。</p>
+  <div>
+    <h2 class="text-2xl font-bold text-gray-800">課程管理</h2>
+    <p class="mt-2 text-gray-600">這裡是課程管理頁面。</p>
+    <!-- 功能將在後續階段開發 -->
   </div>
 </template>
+

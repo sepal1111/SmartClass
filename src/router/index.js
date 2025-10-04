@@ -1,36 +1,72 @@
 // /src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router';
-import { useAuth } from '../store/auth';
-
-// 頁面組件
-import Dashboard from '../views/Dashboard.vue';
-import Login from '../views/Login.vue';
-import ResetPassword from '../views/ResetPassword.vue';
-import StudentManagement from '../views/StudentManagement.vue';
-import SeatingChart from '../views/SeatingChart.vue';
-import Attendance from '../views/Attendance.vue';
-import Curriculum from '../views/Curriculum.vue';
-import Grades from '../views/Grades.vue';
-import Submissions from '../views/Submissions.vue';
-import PingPong from '../views/PingPong.vue';
+// 之後會用 store 來檢查認證狀態
+// import { useAuthStore } from '@/store/auth';
 
 const routes = [
-  { path: '/', redirect: '/dashboard' },
-  { path: '/login', name: 'Login', component: Login, meta: { requiresGuest: true } },
-  { path: '/reset-password', name: 'ResetPassword', component: ResetPassword, meta: { requiresGuest: true } },
-  { 
-    path: '/dashboard', 
-    name: 'Dashboard', 
-    component: Dashboard,
-    meta: { requiresAuth: true } 
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
   },
-  { path: '/students', name: 'StudentManagement', component: StudentManagement, meta: { requiresAuth: true } },
-  { path: '/seating-chart', name: 'SeatingChart', component: SeatingChart, meta: { requiresAuth: true } },
-  { path: '/attendance', name: 'Attendance', component: Attendance, meta: { requiresAuth: true } },
-  { path: '/curriculum', name: 'Curriculum', component: Curriculum, meta: { requiresAuth: true } },
-  { path: '/grades', name: 'Grades', component: Grades, meta: { requiresAuth: true } },
-  { path: '/submissions', name: 'Submissions', component: Submissions, meta: { requiresAuth: true } },
-  { path: '/ping-pong', name: 'PingPong', component: PingPong, meta: { requiresAuth: true } },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('../views/ResetPassword.vue'),
+  },
+  {
+    path: '/',
+    name: 'Dashboard',
+    component: () => import('../views/Dashboard.vue'),
+    meta: { requiresAuth: true }, // 表示此頁面需要登入
+  },
+  {
+    path: '/student-management',
+    name: 'StudentManagement',
+    component: () => import('../views/StudentManagement.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/seating-chart',
+    name: 'SeatingChart',
+    component: () => import('../views/SeatingChart.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/attendance',
+    name: 'Attendance',
+    component: () => import('../views/Attendance.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/curriculum',
+    name: 'Curriculum',
+    component: () => import('../views/Curriculum.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/grades',
+    name: 'Grades',
+    component: () => import('../views/Grades.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/submissions',
+    name: 'Submissions',
+    component: () => import('../views/Submissions.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/pingpong',
+    name: 'PingPong',
+    component: () => import('../views/PingPong.vue'),
+    meta: { requiresAuth: true },
+  },
+  // 如果找不到頁面，可以重導向到首頁
+  {
+    path: '/:catchAll(.*)',
+    redirect: '/',
+  },
 ];
 
 const router = createRouter({
@@ -38,26 +74,19 @@ const router = createRouter({
   routes,
 });
 
-// 全域路由守衛
-router.beforeEach(async (to, from, next) => {
-  const auth = useAuth();
+// 路由守衛 (Navigation Guard)
+router.beforeEach((to, from, next) => {
+  // 之後會在這裡啟用真正的認證檢查
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+  const isAuthenticated = false; // 這裡先假設為未登入，方便測試
+  // const authStore = useAuthStore();
+  // const isAuthenticated = authStore.isAuthenticated;
 
-  // 這是確保應用程式啟動時狀態正確的關鍵
-  // 如果 isLoading 仍為 true，代表初始的狀態檢查還沒完成
-  if (auth.isLoading) {
-    await auth.checkAuthStatus();
-  }
-
-  const isLoggedIn = auth.isLoggedIn;
-
-  if (to.meta.requiresAuth && !isLoggedIn) {
-    // 如果目標頁面需要登入，但使用者未登入，則導向登入頁
-    next({ name: 'Login' });
-  } else if (to.meta.requiresGuest && isLoggedIn) {
-    // 如果目標頁面是給訪客的(如登入頁)，但使用者已登入，則導向主控台
-    next({ name: 'Dashboard' });
+  if (requiresAuth && !isAuthenticated) {
+    // 如果頁面需要登入但使用者未登入，導向登入頁
+    next('/login');
   } else {
-    // 其他情況，正常放行
+    // 否則正常進入
     next();
   }
 });
