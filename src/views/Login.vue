@@ -82,7 +82,7 @@ const router = useRouter();
 const mode = ref('login');
 const email = ref('');
 const password = ref('');
-const passwordConfirm = ref(''); // 新增確認密碼的 ref
+const passwordConfirm = ref('');
 const name = ref('');
 const errorMessage = ref('');
 const successMessage = ref('');
@@ -97,7 +97,7 @@ const switchMode = (newMode) => {
   clearMessages();
   email.value = '';
   password.value = '';
-  passwordConfirm.value = ''; // 切換模式時也清空
+  passwordConfirm.value = '';
   name.value = '';
 };
 
@@ -126,7 +126,12 @@ const handleRegister = async () => {
     successMessage.value = '帳號建立成功！您現在可以返回登入頁面進行登入。';
     mode.value = 'login';
   } catch (error) {
-    errorMessage.value = `註冊失敗: ${error.message}`;
+    // **重要修正**：更新錯誤訊息的判斷條件
+    if (error.message.includes('Email / Password authentication is disabled') || error.message.includes('User registration is disabled')) {
+      errorMessage.value = '已經有管理者，無法接受申請，並且不開放一般使用者註冊';
+    } else {
+      errorMessage.value = `註冊失敗: ${error.message}`;
+    }
   }
 };
 
