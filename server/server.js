@@ -30,27 +30,22 @@ app.use('/uploads', express.static(uploadsDirectory));
 // --- Multer 檔案上傳設定 ---
 const fileImportUpload = multer({ storage: multer.memoryStorage() });
 
-// 學生作業上傳設定 (包含自動重新命名)
 const studentWorkUpload = multer({ 
     storage: multer.diskStorage({
         destination: uploadsDirectory,
         filename: (req, file, cb) => {
-            const studentDbId = req.user.id; // 從 token 中取得學生在資料庫中的 id
+            const studentDbId = req.user.id;
             const stmt = db.prepare('SELECT student_id, name FROM students WHERE id = ?');
             const studentInfo = stmt.get(studentDbId);
-
             if (!studentInfo) {
                 return cb(new Error('找不到學生資料，無法命名檔案。'), null);
             }
-            
-            // 為了安全，過濾掉檔名中的特殊字元
             const originalName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
             const newFilename = `${studentInfo.student_id}_${studentInfo.name}_${originalName}`;
             cb(null, newFilename);
         }
     }) 
 });
-
 
 // --- 中介軟體 (Middleware) ---
 const authenticateToken = (req, res, next) => {
@@ -60,31 +55,27 @@ const authenticateToken = (req, res, next) => {
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
         if (err) return res.sendStatus(403); 
-        req.user = user; // user payload: { id, account/username, type }
+        req.user = user;
         next();
     });
 };
 
 // --- 認證相關 API ---
 app.get('/api/auth/teacher/setup-status', (req, res) => {
-    const stmt = db.prepare('SELECT COUNT(*) as count FROM teachers');
-    const result = stmt.get();
-    res.json({ setupNeeded: result.count === 0 });
+    res.json({ setupNeeded: db.prepare('SELECT COUNT(*) as count FROM teachers').get().count === 0 });
 });
 
 app.post('/api/auth/teacher/register', jsonParser, (req, res) => {
-    const stmt = db.prepare('SELECT COUNT(*) as count FROM teachers');
-    if (stmt.get().count > 0) {
+    if (db.prepare('SELECT COUNT(*) as count FROM teachers').get().count > 0) {
         return res.status(403).json({ error: '系統已有管理員帳號。' });
     }
     const { name, username, password } = req.body;
     if (!name || !username || !password || password.length < 6) {
         return res.status(400).json({ error: '姓名、帳號或密碼格式不符。' });
     }
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    const insertStmt = db.prepare('INSERT INTO teachers (name, username, password) VALUES (?, ?, ?)');
     try {
-        insertStmt.run(name, username, hashedPassword);
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        db.prepare('INSERT INTO teachers (name, username, password) VALUES (?, ?, ?)').run(name, username, hashedPassword);
         res.status(201).json({ message: '教師帳號建立成功！' });
     } catch (err) {
         res.status(500).json({ error: '資料庫錯誤，無法建立帳號。' });
@@ -93,8 +84,7 @@ app.post('/api/auth/teacher/register', jsonParser, (req, res) => {
 
 app.post('/api/auth/teacher/login', jsonParser, (req, res) => {
     const { username, password } = req.body;
-    const stmt = db.prepare('SELECT * FROM teachers WHERE username = ?');
-    const user = stmt.get(username);
+    const user = db.prepare('SELECT * FROM teachers WHERE username = ?').get(username);
     if (user && bcrypt.compareSync(password, user.password)) {
         const { password, ...teacherInfo } = user;
         const token = jwt.sign({ id: user.id, username: user.username, type: 'teacher' }, SECRET_KEY, { expiresIn: '8h' });
@@ -104,14 +94,9 @@ app.post('/api/auth/teacher/login', jsonParser, (req, res) => {
     }
 });
 
-// *** 新增：學生登入 API ***
 app.post('/api/auth/student/login', jsonParser, (req, res) => {
     const { account, password } = req.body;
-    if (!account || !password) {
-        return res.status(400).json({ error: '帳號和密碼為必填項。' });
-    }
-    const stmt = db.prepare('SELECT * FROM students WHERE account = ?');
-    const user = stmt.get(account);
+    const user = db.prepare('SELECT * FROM students WHERE account = ?').get(account);
     if (user && bcrypt.compareSync(password, user.password)) {
         const { password, ...studentInfo } = user;
         const token = jwt.sign({ id: user.id, account: user.account, type: 'student' }, SECRET_KEY, { expiresIn: '8h' });
@@ -121,11 +106,9 @@ app.post('/api/auth/student/login', jsonParser, (req, res) => {
     }
 });
 
-
 // --- 學生管理 API ---
 app.get('/api/students', authenticateToken, (req, res) => {
-    const stmt = db.prepare('SELECT * FROM students');
-    res.json(stmt.all());
+    res.json(db.prepare('SELECT * FROM students').all());
 });
 
 app.post('/api/students', authenticateToken, jsonParser, (req, res) => {
@@ -137,8 +120,7 @@ app.post('/api/students', authenticateToken, jsonParser, (req, res) => {
     const stmt = db.prepare('INSERT INTO students (student_id, name, class, seat_number, gender, account, password) VALUES (?, ?, ?, ?, ?, ?, ?)');
     try {
         const info = stmt.run(student_id, name, className, seat_number, gender, account, hashedPassword);
-        const newStudent = db.prepare('SELECT * FROM students WHERE id = ?').get(info.lastInsertRowid);
-        res.status(201).json(newStudent);
+        res.status(201).json(db.prepare('SELECT * FROM students WHERE id = ?').get(info.lastInsertRowid));
     } catch (err) {
         res.status(500).json({ error: '資料庫錯誤。' });
     }
@@ -158,16 +140,14 @@ app.put('/api/students/:id', authenticateToken, jsonParser, (req, res) => {
     try {
         const info = stmt.run(...params);
         if (info.changes === 0) return res.status(404).json({ error: '找不到指定的學生。' });
-        const updatedStudent = db.prepare('SELECT * FROM students WHERE id = ?').get(id);
-        res.json(updatedStudent);
+        res.json(db.prepare('SELECT * FROM students WHERE id = ?').get(id));
     } catch (err) {
         res.status(500).json({ error: '資料庫錯誤。' });
     }
 });
 
 app.delete('/api/students/:id', authenticateToken, (req, res) => {
-    const { id } = req.params;
-    const info = db.prepare('DELETE FROM students WHERE id = ?').run(id);
+    const info = db.prepare('DELETE FROM students WHERE id = ?').run(req.params.id);
     if (info.changes === 0) return res.status(404).json({ error: '找不到指定的學生。' });
     res.json({ message: '學生已成功刪除。' });
 });
@@ -179,11 +159,22 @@ app.post('/api/students/import', authenticateToken, fileImportUpload.single('fil
         const sheetName = workbook.SheetNames[0];
         const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
         const insertStmt = db.prepare('INSERT OR IGNORE INTO students (student_id, name, class, seat_number, gender, account, password) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        const defaultPassword = bcrypt.hashSync('password123', 10);
         let importedCount = 0;
         db.transaction((students) => {
             for (const student of students) {
-                const info = insertStmt.run(String(student['學號']||''), String(student['姓名']||''), String(student['班級']||''), Number(student['座號']||null), String(student['性別']||''), String(student['帳號']||''), defaultPassword);
+                // *** 修正：讀取 Excel 中的密碼，若無則使用預設值 ***
+                const passwordToHash = String(student['密碼'] || 'password123');
+                const hashedPassword = bcrypt.hashSync(passwordToHash, 10);
+
+                const info = insertStmt.run(
+                    String(student['學號']||''), 
+                    String(student['姓名']||''), 
+                    String(student['班級']||''), 
+                    Number(student['座號']||null), 
+                    String(student['性別']||''), 
+                    String(student['帳號']||''), 
+                    hashedPassword // 使用來自 Excel 或預設的加密後密碼
+                );
                 if (info.changes > 0) importedCount++;
             }
         })(data);
@@ -193,7 +184,42 @@ app.post('/api/students/import', authenticateToken, fileImportUpload.single('fil
     }
 });
 
-// --- 座位表 API ---
+// --- 學生端專用 API ---
+app.get('/api/student/assignments', authenticateToken, (req, res) => {
+    if (req.user.type !== 'student') return res.status(403).json({ error: '僅學生可訪問' });
+    res.json(db.prepare('SELECT * FROM assignments WHERE due_date IS NOT NULL AND due_date > CURRENT_TIMESTAMP ORDER BY due_date ASC').all());
+});
+
+app.post('/api/student/upload', authenticateToken, studentWorkUpload.single('file'), (req, res) => {
+    if (req.user.type !== 'student') return res.status(403).json({ error: '僅學生可訪問' });
+    if (!req.file) return res.status(400).json({ error: '沒有上傳檔案。' });
+    res.json({ message: `檔案 ${req.file.filename} 已成功上傳！` });
+});
+
+// *** 新增：學生修改密碼 API ***
+app.post('/api/student/change-password', authenticateToken, jsonParser, (req, res) => {
+    if (req.user.type !== 'student') {
+        return res.status(403).json({ error: '僅學生可操作。' });
+    }
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword || newPassword.length < 6) {
+        return res.status(400).json({ error: '密碼格式不符，新密碼長度至少需要 6 個字元。' });
+    }
+    const student = db.prepare('SELECT * FROM students WHERE id = ?').get(req.user.id);
+    if (!student || !bcrypt.compareSync(currentPassword, student.password)) {
+        return res.status(401).json({ error: '目前的密碼不正確。' });
+    }
+    try {
+        const newHashedPassword = bcrypt.hashSync(newPassword, 10);
+        db.prepare('UPDATE students SET password = ? WHERE id = ?').run(newHashedPassword, req.user.id);
+        res.json({ message: '密碼已成功更新！' });
+    } catch (err) {
+        res.status(500).json({ error: '資料庫錯誤，更新密碼失敗。' });
+    }
+});
+
+
+// --- 其他 API (座位表, 儀表板) ---
 app.get('/api/seating-chart', authenticateToken, (req, res) => {
     const chart = db.prepare("SELECT * FROM seating_charts WHERE name = 'default'").get();
     if (chart) {
@@ -206,13 +232,11 @@ app.get('/api/seating-chart', authenticateToken, (req, res) => {
 
 app.post('/api/seating-chart', authenticateToken, jsonParser, (req, res) => {
     const { rows, cols, seats } = req.body;
-    const seatsJson = JSON.stringify(seats);
     const stmt = db.prepare(`INSERT INTO seating_charts (name, rows, cols, seats) VALUES ('default', ?, ?, ?) ON CONFLICT(name) DO UPDATE SET rows=excluded.rows, cols=excluded.cols, seats=excluded.seats`);
-    stmt.run(rows, cols, seatsJson);
+    stmt.run(rows, cols, JSON.stringify(seats));
     res.json({ message: '座位表已儲存。' });
 });
 
-// --- 作業 API ---
 app.get('/api/assignments', authenticateToken, (req, res) => {
     res.json(db.prepare('SELECT * FROM assignments ORDER BY created_at DESC').all());
 });
@@ -230,22 +254,6 @@ app.delete('/api/assignments/:id', authenticateToken, (req, res) => {
     res.json({ message: '作業已成功刪除。' });
 });
 
-
-// --- 學生端專用 API (新增) ---
-app.get('/api/student/assignments', authenticateToken, (req, res) => {
-    if (req.user.type !== 'student') return res.status(403).json({ error: '僅學生可訪問' });
-    res.json(db.prepare('SELECT * FROM assignments WHERE due_date IS NOT NULL AND due_date > CURRENT_TIMESTAMP ORDER BY due_date ASC').all());
-});
-
-app.post('/api/student/upload', authenticateToken, studentWorkUpload.single('file'), (req, res) => {
-    if (req.user.type !== 'student') return res.status(403).json({ error: '僅學生可訪問' });
-    if (!req.file) return res.status(400).json({ error: '沒有上傳檔案。' });
-    // 可在此處增加將繳交紀錄寫入資料庫的邏輯
-    res.json({ message: `檔案 ${req.file.filename} 已成功上傳！` });
-});
-
-
-// --- 儀表板 API ---
 app.get('/api/classroom-status', authenticateToken, (req, res) => {
     const { date } = req.query;
     if (!date) return res.status(400).json({ error: '必須提供日期參數' });
