@@ -147,7 +147,7 @@ const fileInput = ref(null);
 
 // --- 新增：搜尋與排序的狀態 ---
 const searchTerm = ref('');
-const sortKey = ref('student_id'); // 預設排序欄位
+const sortKey = ref('seat_number'); // 預設排序欄位 (已修改)
 const sortOrder = ref('asc'); // 預設排序順序 'asc' 或 'desc'
 
 // --- 新增：用於顯示在表格上的計算屬性 ---
@@ -170,9 +170,15 @@ const filteredAndSortedStudents = computed(() => {
             let valA = a[sortKey.value];
             let valB = b[sortKey.value];
 
-            // 確保比較的值存在
+            // 確保比較的值存在，並處理數字排序
             valA = valA === null || valA === undefined ? '' : valA;
             valB = valB === null || valB === undefined ? '' : valB;
+            
+            // 如果是座號，則進行數字比較
+            if (sortKey.value === 'seat_number') {
+                valA = Number(valA);
+                valB = Number(valB);
+            }
 
             if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
             if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;

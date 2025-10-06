@@ -6,49 +6,70 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const xlsx = require('xlsx');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
-const SECRET_KEY = 'your_very_secret_key'; // 建議從環境變數讀取
+const SECRET_KEY = 'your_very_secret_key'; 
 
 app.use(cors());
-app.use(express.json());
+
+// --- 修正：建立獨立的 JSON 解析器中介軟體 ---
+const jsonParser = express.json();
+const upload = multer({ storage: multer.memoryStorage() });
+
+
+// --- 靜態檔案路徑設定 (支援封裝) ---
+const isPkg = typeof process.pkg !== 'undefined';
+const uploadsDirectory = isPkg
+    ? path.join(path.dirname(process.execPath), 'uploads')
+    : path.resolve(__dirname, 'uploads');
+
+// 確保 uploads 資料夾存在
+if (!fs.existsSync(uploadsDirectory)) {
+    fs.mkdirSync(uploadsDirectory, { recursive: true });
+}
+// 讓前端可以透過 /uploads 路徑訪問此資料夾的檔案
+app.use('/uploads', express.static(uploadsDirectory));
+
 
 // --- 中介軟體 (Middleware) ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (token == null) return res.sendStatus(401); // Unauthorized
+    if (token == null) return res.sendStatus(401); 
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
-        if (err) return res.sendStatus(403); // Forbidden
+        if (err) return res.sendStatus(403); 
         req.user = user;
         next();
     });
 };
 
 // --- 教師認證 API ---
-app.get('/api/check-setup', (req, res) => {
+app.get('/api/auth/teacher/setup-status', (req, res) => {
     const stmt = db.prepare('SELECT COUNT(*) as count FROM teachers');
     const result = stmt.get();
-    res.json({ setupCompleted: result.count > 0 });
+    res.json({ setupNeeded: result.count === 0 });
 });
 
-app.post('/api/register', (req, res) => {
+// 套用 jsonParser
+app.post('/api/auth/teacher/register', jsonParser, (req, res) => {
     const stmt = db.prepare('SELECT COUNT(*) as count FROM teachers');
     const result = stmt.get();
     if (result.count > 0) {
         return res.status(403).json({ error: '系統已有管理員帳號。' });
     }
 
-    const { username, password } = req.body;
-    if (!username || !password || password.length < 6) {
-        return res.status(400).json({ error: '帳號或密碼格式不符。' });
+    const { name, username, password } = req.body;
+    if (!name || !username || !password || password.length < 6) {
+        return res.status(400).json({ error: '姓名、帳號或密碼格式不符。' });
     }
 
     const hashedPassword = bcrypt.hashSync(password, 10);
-    const insertStmt = db.prepare('INSERT INTO teachers (username, password) VALUES (?, ?)');
+    const insertStmt = db.prepare('INSERT INTO teachers (name, username, password) VALUES (?, ?, ?)');
     try {
-        const info = insertStmt.run(username, hashedPassword);
+        const info = insertStmt.run(name, username, hashedPassword);
         res.status(201).json({ message: '教師帳號建立成功！', userId: info.lastInsertRowid });
     } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
@@ -58,27 +79,29 @@ app.post('/api/register', (req, res) => {
     }
 });
 
-app.post('/api/login', (req, res) => {
+// 套用 jsonParser
+app.post('/api/auth/teacher/login', jsonParser, (req, res) => {
     const { username, password } = req.body;
     const stmt = db.prepare('SELECT * FROM teachers WHERE username = ?');
     const user = stmt.get(username);
 
     if (user && bcrypt.compareSync(password, user.password)) {
+        const { password, ...teacherInfo } = user; // 移除密碼
         const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: '8h' });
-        res.json({ token });
+        res.json({ token, teacher: teacherInfo });
     } else {
         res.status(401).json({ error: '帳號或密碼錯誤。' });
     }
 });
 
-
-// --- 學生管理 API (Student Management) ---
+// --- 學生管理 API ---
 app.get('/api/students', authenticateToken, (req, res) => {
     const stmt = db.prepare('SELECT * FROM students');
     res.json(stmt.all());
 });
 
-app.post('/api/students', authenticateToken, (req, res) => {
+// 套用 jsonParser
+app.post('/api/students', authenticateToken, jsonParser, (req, res) => {
     const { student_id, name, class: className, seat_number, gender, account, password } = req.body;
     if (!student_id || !name || !account || !password) {
         return res.status(400).json({ error: '學號、姓名、帳號和密碼為必填項。' });
@@ -97,7 +120,8 @@ app.post('/api/students', authenticateToken, (req, res) => {
     }
 });
 
-app.put('/api/students/:id', authenticateToken, (req, res) => {
+// 套用 jsonParser
+app.put('/api/students/:id', authenticateToken, jsonParser, (req, res) => {
     const { id } = req.params;
     const { student_id, name, class: className, seat_number, gender, account, password } = req.body;
     
@@ -133,7 +157,7 @@ app.delete('/api/students/:id', authenticateToken, (req, res) => {
 });
 
 
-const upload = multer({ storage: multer.memoryStorage() });
+// 檔案上傳路由：僅使用 multer，不使用 jsonParser
 app.post('/api/students/import', authenticateToken, upload.single('file'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: '沒有上傳檔案。' });
@@ -165,28 +189,32 @@ app.post('/api/students/import', authenticateToken, upload.single('file'), (req,
                 }
             }
         })(data);
-
         res.json({ message: `成功匯入 ${importedCount} 筆新學生資料。重複的資料會被忽略。` });
-
     } catch (error) {
         console.error('Import error:', error);
-        res.status(500).json({ error: '檔案處理失敗，請確認格式是否正確。' });
+        res.status(500).json({ error: '檔案處理失敗，請確認檔案內容與格式是否正確。' });
     }
 });
 
-// --- 座位表 API (Seating Chart) ---
+
+// --- 其他 API (座位表, 作業, 儀表板) ---
 app.get('/api/seating-chart', authenticateToken, (req, res) => {
     const stmt = db.prepare("SELECT * FROM seating_charts WHERE name = 'default'");
     const chart = stmt.get();
     if (chart) {
-        chart.seats = JSON.parse(chart.seats);
+        try {
+            chart.seats = JSON.parse(chart.seats);
+        } catch (e) {
+            chart.seats = {};
+        }
         res.json(chart);
     } else {
         res.json({ rows: 6, cols: 5, seats: {} });
     }
 });
 
-app.post('/api/seating-chart', authenticateToken, (req, res) => {
+// 套用 jsonParser
+app.post('/api/seating-chart', authenticateToken, jsonParser, (req, res) => {
     const { rows, cols, seats } = req.body;
     const seatsJson = JSON.stringify(seats);
     const stmt = db.prepare(`
@@ -205,13 +233,13 @@ app.post('/api/seating-chart', authenticateToken, (req, res) => {
     }
 });
 
-// --- 作業管理 API (Assignments) ---
 app.get('/api/assignments', authenticateToken, (req, res) => {
     const stmt = db.prepare('SELECT * FROM assignments ORDER BY created_at DESC');
     res.json(stmt.all());
 });
 
-app.post('/api/assignments', authenticateToken, (req, res) => {
+// 套用 jsonParser
+app.post('/api/assignments', authenticateToken, jsonParser, (req, res) => {
     const { title, description, due_date } = req.body;
     if (!title) return res.status(400).json({ error: '作業標題為必填項。' });
     const stmt = db.prepare('INSERT INTO assignments (title, description, due_date) VALUES (?, ?, ?)');
@@ -232,52 +260,37 @@ app.delete('/api/assignments/:id', authenticateToken, (req, res) => {
     res.json({ message: '作業已成功刪除。' });
 });
 
-
-// --- 新增：班級儀表板 API (Classroom Dashboard) ---
-
-// 獲取指定日期的課堂狀態 (座位表 + 出缺席 + 表現)
 app.get('/api/classroom-status', authenticateToken, (req, res) => {
-    const { date } = req.query; // 'YYYY-MM-DD'
-    if (!date) {
-        return res.status(400).json({ error: '必須提供日期參數' });
-    }
-
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ error: '必須提供日期參數' });
     try {
-        // 1. 獲取座位表
         const chartStmt = db.prepare("SELECT * FROM seating_charts WHERE name = 'default'");
         const chart = chartStmt.get() || { rows: 6, cols: 5, seats: '{}' };
         chart.seats = JSON.parse(chart.seats);
 
-        // 2. 獲取當天所有學生的出缺席狀態
         const attendanceStmt = db.prepare('SELECT student_id, status FROM attendance WHERE date = ?');
         const attendanceRecords = attendanceStmt.all(date);
         const attendanceMap = new Map(attendanceRecords.map(r => [r.student_id, r.status]));
 
-        // 3. 獲取當天所有學生的表現總分
         const performanceStmt = db.prepare('SELECT student_id, SUM(points) as total_points FROM performance WHERE date = ? GROUP BY student_id');
         const performanceRecords = performanceStmt.all(date);
         const performanceMap = new Map(performanceRecords.map(r => [r.student_id, r.total_points]));
-
         res.json({
             seatingChart: chart,
             attendance: Object.fromEntries(attendanceMap),
             performance: Object.fromEntries(performanceMap)
         });
-
     } catch (err) {
         console.error('Error fetching classroom status:', err);
         res.status(500).json({ error: '讀取課堂狀態失敗。' });
     }
 });
 
-// 更新/新增一筆出缺席紀錄
-app.post('/api/attendance', authenticateToken, (req, res) => {
+// 套用 jsonParser
+app.post('/api/attendance', authenticateToken, jsonParser, (req, res) => {
     const { student_id, date, status } = req.body;
     const teacher_id = req.user.id;
-    if (!student_id || !date || !status) {
-        return res.status(400).json({ error: '缺少必要參數。' });
-    }
-
+    if (!student_id || !date || !status) return res.status(400).json({ error: '缺少必要參數。' });
     try {
         const stmt = db.prepare(`
             INSERT INTO attendance (student_id, date, status, teacher_id)
@@ -292,14 +305,11 @@ app.post('/api/attendance', authenticateToken, (req, res) => {
     }
 });
 
-// 新增一筆課堂表現
-app.post('/api/performance', authenticateToken, (req, res) => {
+// 套用 jsonParser
+app.post('/api/performance', authenticateToken, jsonParser, (req, res) => {
     const { student_id, date, points, reason } = req.body;
     const teacher_id = req.user.id;
-    if (!student_id || !date || !points) {
-        return res.status(400).json({ error: '缺少必要參數。' });
-    }
-
+    if (!student_id || !date || !points) return res.status(400).json({ error: '缺少必要參數。' });
     try {
         const stmt = db.prepare('INSERT INTO performance (student_id, date, points, reason, teacher_id) VALUES (?, ?, ?, ?, ?)');
         stmt.run(student_id, date, points, reason, teacher_id);
@@ -309,7 +319,6 @@ app.post('/api/performance', authenticateToken, (req, res) => {
         res.status(500).json({ error: '記錄課堂表現失敗。' });
     }
 });
-
 
 const PORT = 3000;
 app.listen(PORT, () => {
