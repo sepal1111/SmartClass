@@ -5,14 +5,16 @@ import StudentManagementView from '../views/StudentManagementView.vue'
 import SeatingChartView from '../views/SeatingChartView.vue'
 import ClassroomDashboardView from '../views/ClassroomDashboardView.vue'
 import AssignmentsView from '../views/AssignmentsView.vue'
-// 新增學生端頁面
 import StudentLoginView from '../views/StudentLoginView.vue'
 import StudentDashboardView from '../views/StudentDashboardView.vue'
+// 將舊的 TeacherLoginView 替換成新的 TeacherAuthView
+import TeacherAuthView from '../views/TeacherAuthView.vue'
 
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    // --- 教師端路由 ---
     {
       path: '/',
       name: 'home',
@@ -43,12 +45,19 @@ const router = createRouter({
       component: AssignmentsView,
       meta: { requiresAuth: true, layout: 'default' }
     },
+    {
+      path: '/teacher/login',
+      name: 'teacher-auth', // 路由名稱更新
+      component: TeacherAuthView,
+      meta: { layout: 'clean' }
+    },
+
     // --- 學生入口路由 ---
     {
       path: '/login',
       name: 'student-login',
       component: StudentLoginView,
-      meta: { layout: 'clean' } // 使用一個乾淨的佈局，沒有導覽列
+      meta: { layout: 'clean' }
     },
     {
       path: '/student/dashboard',
@@ -59,20 +68,21 @@ const router = createRouter({
   ]
 })
 
-// 簡易的路由守衛
+// 更新路由守衛
 router.beforeEach((to, from, next) => {
   const studentToken = localStorage.getItem('studentToken');
+  const teacherToken = localStorage.getItem('teacherToken');
 
   if (to.meta.requiresStudentAuth && !studentToken) {
-    // 如果頁面需要學生登入但沒有 token，導向登入頁
     next({ name: 'student-login' });
+  } else if (to.meta.requiresAuth && !teacherToken) {
+    next({ name: 'teacher-auth' }); // 指向新的教師認證頁面
   } else if (to.name === 'student-login' && studentToken) {
-    // 如果已登入，但又想去登入頁，直接導向學生儀表板
     next({ name: 'student-dashboard' });
+  } else if (to.name === 'teacher-auth' && teacherToken) {
+    next({ name: 'home' });
   }
   else {
-    // 教師端或其他情況，暫時先全部放行
-    // 未來可以加入教師登入邏輯
     next();
   }
 });

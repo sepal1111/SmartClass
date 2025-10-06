@@ -1,67 +1,74 @@
 // File Path: /server/database.js
 const Database = require('better-sqlite3');
 const path = require('path');
+const bcrypt = require('bcrypt');
 
-function initializeDatabase() {
-  const dbPath = path.join(__dirname, '../', 'classroom.sqlite');
-  const db = new Database(dbPath);
+// 修正：使用相對路徑指向專案根目錄下的 classroom.sqlite
+const db = new Database(path.join(__dirname, '..', '..', 'classroom.sqlite'), { verbose: console.log });
 
+function initDb() {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS teachers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS students (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      student_id INTEGER NOT NULL UNIQUE,
+      student_id TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       class TEXT,
       seat_number INTEGER,
       gender TEXT,
-      account TEXT UNIQUE,
-      password TEXT
+      account TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL
     );
-  `);
-  
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT
-    );
-  `);
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS attendance_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,
-        record_date TEXT NOT NULL,
-        status TEXT NOT NULL,
-        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-        UNIQUE(student_id, record_date)
+    CREATE TABLE IF NOT EXISTS seating_charts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT DEFAULT 'default',
+      rows INTEGER NOT NULL,
+      cols INTEGER NOT NULL,
+      seats TEXT NOT NULL
     );
-  `);
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS performance_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,
-        record_date TEXT NOT NULL,
-        points INTEGER NOT NULL,
-        notes TEXT,
-        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
-    );
-  `);
-  
-  db.exec(`
     CREATE TABLE IF NOT EXISTS assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      due_date DATETIME
+    );
+    
+    -- 新增：出缺席紀錄表
+    CREATE TABLE IF NOT EXISTS attendance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      date TEXT NOT NULL, -- 格式 'YYYY-MM-DD'
+      status TEXT NOT NULL, -- 例如: 'present', 'sick', 'absent'
+      teacher_id INTEGER,
+      UNIQUE(student_id, date),
+      FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+      FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+    );
+
+    -- 新增：課堂表現紀錄表
+    CREATE TABLE IF NOT EXISTS performance (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        description TEXT,
-        created_at TEXT NOT NULL,
-        due_date TEXT,
-        folder_path TEXT NOT NULL UNIQUE
+        student_id INTEGER NOT NULL,
+        date TEXT NOT NULL, -- 格式 'YYYY-MM-DD'
+        points INTEGER NOT NULL,
+        reason TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        teacher_id INTEGER,
+        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+        FOREIGN KEY (teacher_id) REFERENCES teachers(id)
     );
   `);
-
-  console.log('資料庫已成功初始化。');
-  return db;
 }
 
-module.exports = initializeDatabase;
+initDb();
+
+module.exports = db;
 
