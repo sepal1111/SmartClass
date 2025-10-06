@@ -10,7 +10,7 @@
         <div class="mb-4">
             <input type="text" v-model="searchTerm" placeholder="搜尋學生..." class="w-full px-3 py-2 border rounded-md">
         </div>
-        <div class="max-h-[60vh] overflow-y-auto">
+        <div class="max-h-[50vh] overflow-y-auto">
           <div v-for="student in filteredStudents" :key="student.id"
                draggable="true"
                @dragstart="startDrag($event, student)"
@@ -26,9 +26,16 @@
           <label>列:</label>
           <input type="number" v-model.number="cols" min="1" max="20" class="w-16 border rounded-md p-1">
         </div>
-         <button @click="saveSeatingChart" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-          儲存座位表
-        </button>
+         <!-- *** 修改開始：將按鈕放入容器中 *** -->
+         <div class="mt-4 space-y-2">
+            <button @click="autoArrangeBySeatNumber" type="button" class="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors duration-300">
+              依座號自動排列
+            </button>
+            <button @click="saveSeatingChart" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors duration-300">
+              儲存座位表
+            </button>
+        </div>
+        <!-- *** 修改結束 *** -->
         <p v-if="successMessage" class="text-green-600 mt-2">{{ successMessage }}</p>
         <p v-if="error" class="text-red-600 mt-2">{{ error }}</p>
       </div>
@@ -64,10 +71,9 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { authFetch } from '@/utils/api'; // 引入 authFetch
+import { authFetch } from '@/utils/api';
 
 const students = ref([]);
-const unassignedStudents = ref([]);
 const rows = ref(6);
 const cols = ref(5);
 const seats = ref({});
@@ -92,10 +98,9 @@ const fetchAllData = async () => {
     isLoading.value = true;
     error.value = '';
     try {
-        // 平行處理兩個 API 請求
         const [studentsRes, chartRes] = await Promise.all([
-            authFetch('/api/students'), // 使用 authFetch
-            authFetch('/api/seating-chart') // 使用 authFetch
+            authFetch('/api/students'),
+            authFetch('/api/seating-chart')
         ]);
 
         if (!studentsRes.ok) throw new Error('無法讀取學生列表');
@@ -126,7 +131,6 @@ const onDrop = (event, seatIndex) => {
   const student = students.value.find(s => s.id === studentId);
 
   if (student) {
-    // 檢查學生是否已在其他座位，若是則清空舊座位
     for (const key in seats.value) {
         if (seats.value[key] && seats.value[key].id === studentId) {
             seats.value[key] = null;
@@ -140,11 +144,44 @@ const removeStudentFromSeat = (seatIndex) => {
     seats.value[seatIndex] = null;
 };
 
+// *** 新增功能：依座號自動排列 ***
+const autoArrangeBySeatNumber = () => {
+    if (!confirm('確定要依座號自動排列嗎？這將會覆蓋目前的座位表設定。')) {
+        return;
+    }
+
+    // 1. 依座號排序學生
+    const sortedStudents = [...students.value].sort((a, b) => {
+        // 將座號轉為數字進行比較，無效座號排到後面
+        const seatA = Number(a.seat_number) || Infinity;
+        const seatB = Number(b.seat_number) || Infinity;
+        return seatA - seatB;
+    });
+
+    // 2. 建立新的座位表物件並填入學生
+    const newSeats = {};
+    const totalSeats = rows.value * cols.value;
+    for (let i = 0; i < sortedStudents.length; i++) {
+        if (i >= totalSeats) {
+            break; // 如果座位已滿，則停止排列
+        }
+        newSeats[i] = sortedStudents[i];
+    }
+
+    // 3. 更新畫面上的座位表
+    seats.value = newSeats;
+
+    // 4. 提示使用者
+    successMessage.value = '已依座號自動排列完成，請記得儲存。';
+    setTimeout(() => successMessage.value = '', 4000);
+};
+
+
 const saveSeatingChart = async () => {
     error.value = '';
     successMessage.value = '';
     try {
-        const response = await authFetch('/api/seating-chart', { // 使用 authFetch
+        const response = await authFetch('/api/seating-chart', {
             method: 'POST',
             body: JSON.stringify({
                 rows: rows.value,
@@ -163,4 +200,3 @@ const saveSeatingChart = async () => {
 
 onMounted(fetchAllData);
 </script>
-

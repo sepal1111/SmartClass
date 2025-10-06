@@ -5,10 +5,8 @@ import StudentManagementView from '../views/StudentManagementView.vue'
 import SeatingChartView from '../views/SeatingChartView.vue'
 import ClassroomDashboardView from '../views/ClassroomDashboardView.vue'
 import AssignmentsView from '../views/AssignmentsView.vue'
-import StudentLoginView from '../views/StudentLoginView.vue'
 import StudentDashboardView from '../views/StudentDashboardView.vue'
-// 將舊的 TeacherLoginView 替換成新的 TeacherAuthView
-import TeacherAuthView from '../views/TeacherAuthView.vue'
+import AuthView from '../views/AuthView.vue' // 引入新的統一認證頁面
 
 
 const router = createRouter({
@@ -45,20 +43,16 @@ const router = createRouter({
       component: AssignmentsView,
       meta: { requiresAuth: true, layout: 'default' }
     },
+    
+    // --- 統一認證路由 ---
     {
-      path: '/teacher/login',
-      name: 'teacher-auth', // 路由名稱更新
-      component: TeacherAuthView,
+      path: '/login',
+      name: 'auth',
+      component: AuthView,
       meta: { layout: 'clean' }
     },
 
-    // --- 學生入口路由 ---
-    {
-      path: '/login',
-      name: 'student-login',
-      component: StudentLoginView,
-      meta: { layout: 'clean' }
-    },
+    // --- 學生端路由 ---
     {
       path: '/student/dashboard',
       name: 'student-dashboard',
@@ -68,25 +62,35 @@ const router = createRouter({
   ]
 })
 
-// 更新路由守衛
+// 全域路由守衛
 router.beforeEach((to, from, next) => {
   const studentToken = localStorage.getItem('studentToken');
   const teacherToken = localStorage.getItem('teacherToken');
 
-  if (to.meta.requiresStudentAuth && !studentToken) {
-    next({ name: 'student-login' });
-  } else if (to.meta.requiresAuth && !teacherToken) {
-    next({ name: 'teacher-auth' }); // 指向新的教師認證頁面
-  } else if (to.name === 'student-login' && studentToken) {
-    next({ name: 'student-dashboard' });
-  } else if (to.name === 'teacher-auth' && teacherToken) {
-    next({ name: 'home' });
+  // 如果目標是登入頁
+  if (to.name === 'auth') {
+    // 如果已有教師 token，直接導向教師首頁
+    if (teacherToken) {
+      next({ name: 'home' });
+      return;
+    }
+    // 如果已有學生 token，直接導向學生儀表板
+    if (studentToken) {
+      next({ name: 'student-dashboard' });
+      return;
+    }
   }
-  else {
-    next();
+
+  // 檢查需要教師權限的頁面
+  if (to.meta.requiresAuth && !teacherToken) {
+    next({ name: 'auth' }); // 未登入則導向統一登入頁
+  // 檢查需要學生權限的頁面
+  } else if (to.meta.requiresStudentAuth && !studentToken) {
+    next({ name: 'auth' }); // 未登入則導向統一登入頁
+  } else {
+    next(); // 其他情況皆放行
   }
 });
 
 
 export default router
-

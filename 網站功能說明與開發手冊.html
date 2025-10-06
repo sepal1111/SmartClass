@@ -121,6 +121,15 @@
                     </ul>
                 </div>
                 <div class="bg-gray-50 p-5 rounded-lg border">
+                    <h4>成績紀錄 (Grade Record)</h4>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li><strong>分類管理</strong>: 成績被劃分為「課堂表現紀錄」、「平時測驗」、「定期評量」三大類。</li>
+                        <li><strong>數據連動</strong>: 「課堂表現紀錄」的分數為唯讀，由「課堂表現」功能自動累計學期總分，無法手動修改。</li>
+                        <li><strong>登錄流程</strong>: 進行成績登錄時，必須先選擇「平時測驗」或「定期評量」類別，再選擇科目，最後手動輸入該次成績的具體名稱（例如：第一次月考、第二單元小考）。</li>
+                        <li><strong>科目管理</strong>: 系統提供科目編輯功能，預設建立「國語、數學、社會、自然、英文、彈性」等科目，教師可自行新增、修改或刪除。</li>
+                    </ul>
+                </div>
+                <div class="bg-gray-50 p-5 rounded-lg border">
                     <h4>數位作品繳交 (Digital Work Submission)</h4>
                     <ul class="list-disc list-inside text-gray-700 space-y-1">
                         <li><strong>教師端</strong>: 建立作業項目，系統自動在伺服器電腦上建立對應資料夾。</li>
@@ -147,30 +156,47 @@
             <div class="bg-gray-800 text-white font-mono text-sm p-4 rounded-lg overflow-x-auto">
 <pre><code>smart-classroom/
 ├── client/                      # 前端 Vue.js 專案目錄
+│   ├── public/
+│   │   └── favicon.ico
 │   ├── src/
 │   │   ├── assets/
+│   │   │   └── main.css
 │   │   ├── router/
+│   │   │   └── index.js         # 路由設定
+│   │   ├── utils/
+│   │   │   └── api.js           # API 請求封裝
 │   │   ├── views/
-│   │   │   ├── TeacherPingPongView.vue  # (新增) 教師端
-│   │   │   └── StudentPingPongView.vue  # (新增) 學生端
-│   │   ├── App.vue
-│   │   └── main.js
+│   │   │   ├── AssignmentsView.vue          # 作業管理頁面
+│   │   │   ├── AuthView.vue                 # 統一認證頁面 (師/生登入、註冊)
+│   │   │   ├── ClassroomDashboardView.vue   # 課堂儀表板頁面
+│   │   │   ├── HomeView.vue                 # 教師登入後首頁
+│   │   │   ├── SeatingChartView.vue         # 座位表設定頁面
+│   │   │   ├── StudentDashboardView.vue     # 學生登入後儀表板
+│   │   │   ├── StudentManagementView.vue    # 學生管理頁面
+│   │   │   ├── GradeManagementView.vue      # (規劃中) 成績紀錄
+│   │   │   ├── TeacherPingPongView.vue      # (規劃中) 即時互動教師端
+│   │   │   └── StudentPingPongView.vue      # (規劃中) 即時互動學生端
+│   │   ├── App.vue                # 主應用程式組件
+│   │   └── main.js                # 前端入口點
 │   ├── .gitignore
 │   ├── index.html
 │   ├── package.json
+│   ├── postcss.config.js
+│   ├── tailwind.config.js
 │   └── vite.config.js
 │
 ├── server/                      # 後端 Node.js 專案目錄
+│   ├── data/                    # (自動生成) 資料庫存放目錄
 │   ├── templates/
-│   │   └── template.xlsx
+│   │   └── template.xlsx        # (規劃中) 學生匯入範本
 │   ├── .gitignore
-│   ├── database.js
+│   ├── database.js              # 資料庫設定
 │   ├── package.json
-│   └── server.js                # 後端主程式 (Express + Socket.IO)
+│   └── server.js                # 後端主程式 (Express + API)
 │
 ├── uploads/                     # (自動生成) 學生作業上傳目錄
 │
-└── classroom.sqlite             # (自動生成) 資料庫檔案
+└── .gitignore                   # 根目錄 .gitignore
 </code></pre>
             </div>
         </section>

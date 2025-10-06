@@ -29,7 +29,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
@@ -44,8 +44,18 @@ const logout = () => {
   localStorage.removeItem('teacherToken');
   localStorage.removeItem('teacherInfo');
   teacherIsAuthenticated.value = false;
-  router.push({ name: 'teacher-login' });
+  // *** 修正：登出後導向到統一的登入頁面 ***
+  router.push({ name: 'auth' });
 };
 
+// 監聽路由變化，以處理瀏覽器刷新後狀態丟失的問題
+watch(
+  () => route.path,
+  () => {
+    teacherIsAuthenticated.value = !!localStorage.getItem('teacherToken');
+    if (teacherIsAuthenticated.value) {
+      teacherInfo.value = JSON.parse(localStorage.getItem('teacherInfo') || '{}');
+    }
+  }
+);
 </script>
-

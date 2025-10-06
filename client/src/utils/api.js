@@ -12,7 +12,6 @@ export const authFetch = (url, options = {}) => {
 
   // 設定預設標頭
   const defaultHeaders = {
-    'Content-Type': 'application/json',
     ...options.headers,
   };
 
@@ -20,6 +19,14 @@ export const authFetch = (url, options = {}) => {
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
+  
+  // *** 修正開始 ***
+  // 判斷如果 body 是 FormData 的實例，就不要設定 Content-Type
+  // 瀏覽器會自動為 FormData 設定正確的 multipart/form-data 標頭
+  if (!(options.body instanceof FormData)) {
+    defaultHeaders['Content-Type'] = 'application/json';
+  }
+  // *** 修正結束 ***
 
   const finalOptions = {
     ...options,
