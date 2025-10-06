@@ -7,8 +7,11 @@
  * @returns {Promise<Response>} - 返回 fetch 的 Promise 物件
  */
 export const authFetch = (url, options = {}) => {
+  // *** 修正開始 ***
   // 從 localStorage 讀取儲存的 token
-  const token = localStorage.getItem('teacherToken');
+  // 優先讀取學生 token，若無則讀取教師 token
+  const token = localStorage.getItem('studentToken') || localStorage.getItem('teacherToken');
+  // *** 修正結束 ***
 
   // 設定預設標頭
   const defaultHeaders = {
@@ -20,13 +23,11 @@ export const authFetch = (url, options = {}) => {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
   
-  // *** 修正開始 ***
   // 判斷如果 body 是 FormData 的實例，就不要設定 Content-Type
   // 瀏覽器會自動為 FormData 設定正確的 multipart/form-data 標頭
   if (!(options.body instanceof FormData)) {
     defaultHeaders['Content-Type'] = 'application/json';
   }
-  // *** 修正結束 ***
 
   const finalOptions = {
     ...options,
@@ -36,3 +37,4 @@ export const authFetch = (url, options = {}) => {
   // 使用更新後的選項執行 fetch
   return fetch(url, finalOptions);
 };
+

@@ -15,6 +15,7 @@
             <router-link to="/dashboard" class="mx-2 text-gray-600 hover:text-blue-500">課堂儀表板</router-link>
             <router-link to="/assignments" class="mx-2 text-gray-600 hover:text-blue-500">作業管理</router-link>
             <router-link to="/grades" class="mx-2 text-gray-600 hover:text-blue-500">成績管理</router-link>
+            <router-link to="/pingpong-teacher" class="mx-2 text-gray-600 hover:text-blue-500">PingPong</router-link>
             <button @click="logout" class="ml-4 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">登出</button>
           </div>
         </div>
@@ -55,6 +56,7 @@ const logout = () => {
   router.push({ name: 'auth' });
 };
 
+// 監聽 storage 事件，以便在多個分頁中同步登出狀態
 const handleStorageChange = (event) => {
   if (event.key === 'teacherToken' || event.key === 'teacherInfo') {
     checkAuth();
@@ -64,6 +66,7 @@ const handleStorageChange = (event) => {
 onMounted(() => {
   checkAuth();
   window.addEventListener('storage', handleStorageChange);
+   // 監聽路由變化，確保每次導航都重新檢查認證狀態
   router.afterEach(() => {
     checkAuth();
   });

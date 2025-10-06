@@ -4,10 +4,13 @@
     <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
       <div class="flex justify-between items-center mb-8 border-b pb-4">
         <div>
-          <h1 class="text-3xl font-bold text-gray-800">數位作品繳交</h1>
+          <h1 class="text-3xl font-bold text-gray-800">學生儀表板</h1>
           <p class="text-lg text-gray-600">{{ student.name }} 同學，您好！</p>
         </div>
         <div class="flex items-center space-x-4">
+           <button @click="goToPingPong" class="bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded transition duration-300">
+              加入 PingPong
+          </button>
            <button @click="isModalOpen = true" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-300">
               修改密碼
           </button>
@@ -34,9 +37,9 @@
                 <p class="text-sm text-red-500 mt-2 font-medium">繳交截止日期：{{ new Date(assignment.due_date).toLocaleString() }}</p>
               </div>
               <div class="w-full md:w-auto">
-                <input type="file" @change="handleFileSelect($event)" :id="'file-upload-' + assignment.id" class="hidden">
+                <input type="file" @change="handleFileSelect($event, assignment.id)" :id="'file-upload-' + assignment.id" class="hidden">
                 <button @click="triggerFileInput(assignment.id)" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300">選擇檔案上傳</button>
-                 <p v-if="selectedFile" class="text-sm text-gray-500 mt-2 truncate">已選取: {{ selectedFile.name }}</p>
+                 <p v-if="selectedFile && selectedFile.assignmentId === assignment.id" class="text-sm text-gray-500 mt-2 truncate">已選取: {{ selectedFile.file.name }}</p>
               </div>
             </div>
           </div>
@@ -55,15 +58,15 @@
                           <div class="mt-4 space-y-4">
                               <div>
                                   <label class="block text-sm font-medium text-gray-700">目前的密碼</label>
-                                  <input type="password" v-model="passwordForm.currentPassword" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                                  <input type="password" v-model="passwordForm.currentPassword" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                               </div>
                               <div>
                                   <label class="block text-sm font-medium text-gray-700">新密碼 (至少 6 個字元)</label>
-                                  <input type="password" v-model="passwordForm.newPassword" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                                  <input type="password" v-model="passwordForm.newPassword" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                               </div>
                               <div>
                                   <label class="block text-sm font-medium text-gray-700">確認新密碼</label>
-                                  <input type="password" v-model="passwordForm.confirmPassword" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                                  <input type="password" v-model="passwordForm.confirmPassword" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                               </div>
                               <p v-if="passwordForm.error" class="text-red-500 text-sm">{{ passwordForm.error }}</p>
                           </div>
@@ -82,6 +85,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue';
 import { useRouter } from 'vue-router';
+import { authFetch } from '@/utils/api';
 
 const router = useRouter();
 const student = ref(JSON.parse(localStorage.getItem('studentInfo') || '{}'));
@@ -94,6 +98,7 @@ const passwordForm = reactive({ currentPassword: '', newPassword: '', confirmPas
 
 const showMessage = (text, type = 'success', duration = 4000) => { message.value = { text, type }; setTimeout(() => { message.value = { text: '', type: 'success' }; }, duration); };
 const logout = () => { localStorage.clear(); router.push({ name: 'auth' }); };
+const goToPingPong = () => { router.push({ name: 'pingpong-student' }); };
 
 const fetchAssignments = async () => {
   loading.value = true;
@@ -115,8 +120,12 @@ const triggerFileInput = (assignmentId) => {
 const handleFileSelect = async (event, assignmentId) => {
   const file = event.target.files[0];
   if (!file) return;
-  selectedFile.value = file;
-  if (!confirm(`確定要將檔案「${file.name}」上傳至此作業嗎？`)) { selectedFile.value = null; return; }
+  selectedFile.value = { file, assignmentId };
+  if (!confirm(`確定要將檔案「${file.name}」上傳至此作業嗎？`)) { 
+      selectedFile.value = null; 
+      event.target.value = ''; // 清空 file input
+      return; 
+  }
   const formData = new FormData();
   formData.append('file', file);
   try {
@@ -125,7 +134,10 @@ const handleFileSelect = async (event, assignmentId) => {
       if (!response.ok) throw new Error(result.error || '上傳失敗');
       showMessage(result.message, 'success');
   } catch (error) { showMessage(error.message, 'error'); } 
-  finally { selectedFile.value = null; }
+  finally { 
+      selectedFile.value = null; 
+      event.target.value = ''; // 清空 file input
+  }
 };
 
 const closeModal = () => {
