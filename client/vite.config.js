@@ -16,7 +16,13 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      // 原有的 API 代理規則
       '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      // 新增：照片路徑的代理規則
+      '/photos': {
         target: 'http://localhost:3000',
         changeOrigin: true,
       }

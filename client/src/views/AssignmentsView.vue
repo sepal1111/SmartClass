@@ -3,7 +3,6 @@
   <div>
     <h1 class="text-3xl font-bold mb-6">作業管理</h1>
 
-    <!-- 新增作業表單 -->
     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
       <h2 class="text-xl font-semibold mb-4">{{ isEditing ? '編輯作業' : '新增作業' }}</h2>
       <form @submit.prevent="handleAssignmentSubmit" class="space-y-4">
@@ -36,7 +35,6 @@
     </div>
      <p v-if="error" class="text-red-500 mb-4">{{ error }}</p>
 
-    <!-- 作業列表 -->
     <div class="bg-white p-6 rounded-lg shadow-md">
       <h2 class="text-xl font-semibold mb-4">現有作業列表</h2>
        <div v-if="isLoading" class="text-center">讀取中...</div>
@@ -63,7 +61,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { authFetch } from '@/utils/api'; // 引入 authFetch
+import { authFetch } from '@/utils/api';
 
 const assignments = ref([]);
 const newAssignment = ref({ title: '', description: '', due_date: '' });
@@ -76,23 +74,17 @@ const fetchAssignments = async () => {
   isLoading.value = true;
   error.value = '';
   try {
-    const response = await authFetch('/api/assignments'); // 使用 authFetch
+    const response = await authFetch('/api/assignments');
     if (!response.ok) throw new Error('無法讀取作業列表');
     assignments.value = await response.json();
-  } catch (err) {
-    error.value = `錯誤: ${err.message}`;
-  } finally {
-    isLoading.value = false;
-  }
+  } catch (err) { error.value = `錯誤: ${err.message}`; } 
+  finally { isLoading.value = false; }
 };
 
 const handleAssignmentSubmit = async () => {
   if (isEditing.value) {
-    // 編輯邏輯 (若後端有支援)
-    console.log("更新作業", editingId.value, newAssignment.value);
     alert('更新功能尚未實作');
   } else {
-    // 新增邏輯
     await createAssignment();
   }
 };
@@ -100,19 +92,13 @@ const handleAssignmentSubmit = async () => {
 const createAssignment = async () => {
     error.value = '';
     try {
-        const response = await authFetch('/api/assignments', { // 使用 authFetch
-            method: 'POST',
-            body: JSON.stringify(newAssignment.value)
-        });
+        const response = await authFetch('/api/assignments', { method: 'POST', body: JSON.stringify(newAssignment.value) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || '建立作業失敗');
-        assignments.value.unshift(data); // 將新作業加到列表最前面
-        newAssignment.value = { title: '', description: '', due_date: '' }; // 清空表單
-    } catch (err) {
-        error.value = `錯誤: ${err.message}`;
-    }
+        assignments.value.unshift(data);
+        newAssignment.value = { title: '', description: '', due_date: '' };
+    } catch (err) { error.value = `錯誤: ${err.message}`; }
 };
-
 
 const editAssignment = (assignment) => {
   isEditing.value = true;
@@ -127,18 +113,15 @@ const cancelEdit = () => {
 };
 
 const deleteAssignment = async (id) => {
-  if (!confirm('確定要刪除這個作業嗎？相關的學生繳交檔案也會一併刪除。')) return;
+  if (!confirm('確定要刪除這個作業嗎？')) return;
   error.value = '';
   try {
-      const response = await authFetch(`/api/assignments/${id}`, { method: 'DELETE' }); // 使用 authFetch
+      const response = await authFetch(`/api/assignments/${id}`, { method: 'DELETE' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '刪除失敗');
       assignments.value = assignments.value.filter(a => a.id !== id);
-  } catch (err) {
-      error.value = `錯誤: ${err.message}`;
-  }
+  } catch (err) { error.value = `錯誤: ${err.message}`; }
 };
 
 onMounted(fetchAssignments);
 </script>
-

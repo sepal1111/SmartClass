@@ -9,7 +9,11 @@
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-start">
           <h2 class="text-lg font-semibold text-gray-700">今日出缺席 ({{ today_display }})</h2>
-          <button @click="openAttendanceModal" class="bg-purple-500 text-white px-3 py-1 rounded-md text-sm hover:bg-purple-600 transition-colors">批次登記</button>
+          <div class="flex space-x-2">
+              <button @click="openAttendanceModal" class="bg-purple-500 text-white px-3 py-1 rounded-md text-sm hover:bg-purple-600 transition-colors">批次登記</button>
+              <!-- 新增：學期統計按鈕 -->
+              <button @click="openAttendanceSummaryModal" class="bg-gray-500 text-white px-3 py-1 rounded-md text-sm hover:bg-gray-600 transition-colors">學期統計</button>
+          </div>
         </div>
         <div v-if="isLoading" class="mt-2">讀取中...</div>
         <div v-else class="mt-4 grid grid-cols-3 gap-2 text-center">
@@ -163,6 +167,63 @@
         </div>
     </div>
 
+    <!-- 新增：學期出缺席統計 Modal -->
+    <div v-if="isAttendanceSummaryModalOpen" class="fixed z-50 inset-0 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="fixed inset-0 transition-opacity" aria-hidden="true" @click="isAttendanceSummaryModalOpen = false">
+          <div class="absolute inset-0 bg-gray-600 opacity-75"></div>
+        </div>
+        <div class="inline-block bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all my-8 max-w-6xl w-full">
+          <div class="bg-white px-6 pt-5 pb-4">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">學期出缺席統計</h3>
+            <!-- Date Range Picker -->
+            <div class="flex items-center space-x-4 mb-4 p-4 bg-gray-100 rounded-md">
+                <label for="startDate" class="text-sm font-medium">開始日期:</label>
+                <input type="date" id="startDate" v-model="summaryStartDate" class="border-gray-300 rounded-md shadow-sm">
+                <label for="endDate" class="text-sm font-medium">結束日期:</label>
+                <input type="date" id="endDate" v-model="summaryEndDate" class="border-gray-300 rounded-md shadow-sm">
+                <button @click="fetchAttendanceSummary" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">查詢</button>
+            </div>
+            <div class="max-h-[60vh] overflow-y-auto">
+              <div v-if="summaryLoading" class="text-center py-8">正在讀取統計資料...</div>
+              <table v-else class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium uppercase">座號</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium uppercase">姓名</th>
+                    <th class="px-4 py-2 text-center text-xs font-medium uppercase text-green-600">出席</th>
+                    <th class="px-4 py-2 text-center text-xs font-medium uppercase text-orange-600">病假</th>
+                    <th class="px-4 py-2 text-center text-xs font-medium uppercase text-blue-600">公假</th>
+                    <th class="px-4 py-2 text-center text-xs font-medium uppercase text-yellow-600">事假</th>
+                    <th class="px-4 py-2 text-center text-xs font-medium uppercase text-red-600">曠課</th>
+                    <th class="px-4 py-2 text-center text-xs font-medium uppercase">出席率</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-for="record in attendanceSummaryData" :key="record.student_id">
+                    <td class="px-4 py-2 whitespace-nowrap">{{ record.seat_number }}</td>
+                    <td class="px-4 py-2 whitespace-nowrap font-semibold">{{ record.name }}</td>
+                    <td class="px-4 py-2 text-center">{{ record.present }}</td>
+                    <td class="px-4 py-2 text-center">{{ record.sick }}</td>
+                    <td class="px-4 py-2 text-center">{{ record.official }}</td>
+                    <td class="px-4 py-2 text-center">{{ record.personal }}</td>
+                    <td class="px-4 py-2 text-center text-red-600 font-bold">{{ record.absent }}</td>
+                    <td class="px-4 py-2 text-center font-medium">
+                        <span v-if="calculateAttendanceRate(record) !== null">{{ calculateAttendanceRate(record) }}%</span>
+                        <span v-else>N/A</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="bg-gray-100 px-6 py-3 flex justify-end">
+            <button @click="isAttendanceSummaryModalOpen = false" type="button" class="rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white font-medium text-gray-700 hover:bg-gray-50">關閉</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -194,6 +255,14 @@ const attendanceTypes = {
   personal:{ label: '事假', color: 'yellow', bgColor: 'bg-yellow-500', hoverBg: 'hover:bg-yellow-200' },
   absent:  { label: '曠課', color: 'red', bgColor: 'bg-red-500', hoverBg: 'hover:bg-red-200' },
 };
+
+// --- 新增：學期統計相關狀態 ---
+const isAttendanceSummaryModalOpen = ref(false);
+const summaryStartDate = ref('');
+const summaryEndDate = ref('');
+const attendanceSummaryData = ref([]);
+const summaryLoading = ref(false);
+
 
 // --- Computed Properties ---
 
@@ -420,6 +489,39 @@ const closePickerModal = () => {
     randomlyPickedStudent.value = null;
   }, 300);
 };
+
+// --- 新增：學期統計相關函式 ---
+const openAttendanceSummaryModal = () => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 90);
+    summaryEndDate.value = endDate.toISOString().split('T')[0];
+    summaryStartDate.value = startDate.toISOString().split('T')[0];
+    isAttendanceSummaryModalOpen.value = true;
+    fetchAttendanceSummary();
+};
+
+const fetchAttendanceSummary = async () => {
+    summaryLoading.value = true;
+    error.value = '';
+    try {
+        const response = await authFetch(`/api/attendance-summary?startDate=${summaryStartDate.value}&endDate=${summaryEndDate.value}`);
+        if (!response.ok) throw new Error('無法讀取學期統計資料');
+        attendanceSummaryData.value = await response.json();
+    } catch (err) {
+        error.value = err.message;
+    } finally {
+        summaryLoading.value = false;
+    }
+};
+
+const calculateAttendanceRate = (record) => {
+    const totalDays = record.present + record.sick + record.official + record.personal + record.absent;
+    if (totalDays === 0) return null;
+    const rate = (record.present / totalDays) * 100;
+    return rate.toFixed(1);
+};
+
 
 onMounted(fetchDashboardData);
 </script>

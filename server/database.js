@@ -4,15 +4,11 @@ const path = require('path');
 const fs = require('fs');
 
 // --- 修正路徑以支援封裝 ---
-// 判斷是否在 pkg 封裝環境中
 const isPkg = typeof process.pkg !== 'undefined';
-
-// 如果在封裝環境，資料庫路徑設定在執行檔同層的 data 資料夾；否則使用開發時期的相對路徑
 const dataDirectory = isPkg 
     ? path.join(path.dirname(process.execPath), 'data') 
     : path.resolve(__dirname, 'data');
 
-// 確保資料夾存在
 if (!fs.existsSync(dataDirectory)) {
     fs.mkdirSync(dataDirectory, { recursive: true });
 }
@@ -23,7 +19,7 @@ const db = new Database(dbPath);
 
 // 初始化資料庫結構
 const initDb = () => {
-    // 增加 name 欄位
+    // 教師表
     const createTeachersTable = `
     CREATE TABLE IF NOT EXISTS teachers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,6 +29,7 @@ const initDb = () => {
     );
   `;
 
+    // 學生表
     const createStudentsTable = `
     CREATE TABLE IF NOT EXISTS students (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,6 +43,7 @@ const initDb = () => {
     );
   `;
 
+    // 座位表
     const createSeatingChartsTable = `
     CREATE TABLE IF NOT EXISTS seating_charts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +54,7 @@ const initDb = () => {
     );
   `;
 
+    // 作業表
     const createAssignmentsTable = `
     CREATE TABLE IF NOT EXISTS assignments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,6 +65,7 @@ const initDb = () => {
     );
   `;
 
+  // 出缺席表
   const createAttendanceTable = `
     CREATE TABLE IF NOT EXISTS attendance (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,6 +79,7 @@ const initDb = () => {
     );
   `;
 
+  // 課堂表現表
   const createPerformanceTable = `
     CREATE TABLE IF NOT EXISTS performance (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,15 +94,65 @@ const initDb = () => {
     );
   `;
 
+  // --- 新增：成績管理相關資料表 ---
+  // 科目表
+  const createSubjectsTable = `
+    CREATE TABLE IF NOT EXISTS subjects (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      teacher_id INTEGER,
+      FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+    );
+  `;
+  // 成績項目表
+  const createGradeItemsTable = `
+    CREATE TABLE IF NOT EXISTS grade_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL, -- '平時測驗', '定期評量'
+      subject_id INTEGER NOT NULL,
+      date DATETIME DEFAULT CURRENT_TIMESTAMP,
+      teacher_id INTEGER,
+      FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+      FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+    );
+  `;
+  // 成績紀錄表
+  const createGradesTable = `
+    CREATE TABLE IF NOT EXISTS grades (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      grade_item_id INTEGER NOT NULL,
+      student_id TEXT NOT NULL,
+      score REAL, -- 使用 REAL 以支援小數點
+      FOREIGN KEY (grade_item_id) REFERENCES grade_items(id) ON DELETE CASCADE,
+      FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+      UNIQUE(grade_item_id, student_id)
+    );
+  `;
+
     db.exec(createTeachersTable);
     db.exec(createStudentsTable);
     db.exec(createSeatingChartsTable);
     db.exec(createAssignmentsTable);
     db.exec(createAttendanceTable);
     db.exec(createPerformanceTable);
+    db.exec(createSubjectsTable);
+    db.exec(createGradeItemsTable);
+    db.exec(createGradesTable);
+
+    // --- 新增：插入預設科目資料 ---
+    const checkSubjects = db.prepare('SELECT COUNT(*) as count FROM subjects').get();
+    if (checkSubjects.count === 0) {
+        const insert = db.prepare('INSERT INTO subjects (name) VALUES (?)');
+        const defaultSubjects = ['國語', '數學', '社會', '自然', '英文', '彈性'];
+        const insertMany = db.transaction((subjects) => {
+            for (const subject of subjects) insert.run(subject);
+        });
+        insertMany(defaultSubjects);
+        console.log('預設科目已成功插入資料庫。');
+    }
 };
 
 initDb();
 
 module.exports = db;
-
