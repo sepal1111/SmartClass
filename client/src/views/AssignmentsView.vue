@@ -3,9 +3,7 @@
   <div>
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold">作業管理</h1>
-      <button @click="openModal()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300">
-        新增作業
-      </button>
+      <button @click="openModal()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300">新增作業</button>
     </div>
 
     <!-- 訊息提示框 -->
@@ -15,25 +13,26 @@
 
     <div class="bg-white shadow-md rounded-lg">
       <div v-if="loading" class="text-center p-8 text-gray-500">讀取中...</div>
-      <div v-else-if="assignments.length === 0" class="text-center p-8 text-gray-500">尚未建立任何作業</div>
       <div v-else class="overflow-x-auto">
         <table class="min-w-full leading-normal">
           <thead>
             <tr>
-              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">標題</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">作業標題</th>
+              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">描述</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">建立日期</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">繳交截止日</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">操作</th>
             </tr>
           </thead>
           <tbody>
+            <tr v-if="assignments.length === 0">
+              <td colspan="5" class="text-center py-10 text-gray-500">尚未建立任何作業</td>
+            </tr>
             <tr v-for="assignment in assignments" :key="assignment.id">
-              <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">
-                <p class="text-gray-900 whitespace-no-wrap font-bold">{{ assignment.title }}</p>
-                <p class="text-gray-600 whitespace-no-wrap mt-1">{{ assignment.description }}</p>
-              </td>
+              <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm font-semibold">{{ assignment.title }}</td>
+              <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">{{ assignment.description || '-' }}</td>
               <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">{{ new Date(assignment.created_at).toLocaleDateString() }}</td>
-              <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">{{ assignment.due_date || '無' }}</td>
+              <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">{{ assignment.due_date || '-' }}</td>
               <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm text-right">
                 <button @click="deleteAssignment(assignment)" class="text-red-600 hover:text-red-900">刪除</button>
               </td>
@@ -43,9 +42,9 @@
       </div>
     </div>
 
-    <!-- 新增/編輯 Modal -->
+    <!-- 新增作業 Modal -->
     <div v-if="isModalOpen" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-      <div class="relative mx-auto p-8 border w-full max-w-lg shadow-lg rounded-md bg-white">
+      <div class="relative mx-auto p-8 border w-full max-w-md shadow-lg rounded-md bg-white">
         <h3 class="text-2xl font-bold mb-6">新增作業</h3>
         <form @submit.prevent="handleSubmit">
           <div class="mb-4">
@@ -53,7 +52,7 @@
             <input v-model="currentAssignment.title" id="title" type="text" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
           </div>
           <div class="mb-4">
-            <label class="block text-gray-700 text-sm font-bold mb-2" for="description">作業說明</label>
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="description">描述</label>
             <textarea v-model="currentAssignment.description" id="description" rows="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"></textarea>
           </div>
           <div class="mb-6">
@@ -62,7 +61,7 @@
           </div>
           <div class="flex justify-end space-x-4">
             <button type="button" @click="closeModal" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">取消</button>
-            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">儲存</button>
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">建立</button>
           </div>
         </form>
       </div>
@@ -113,10 +112,12 @@ const handleSubmit = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(currentAssignment.value)
     });
-    if (!response.ok) throw new Error('儲存作業失敗');
-    
-    await fetchAssignments();
-    showMessage('作業已成功新增！', 'success');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || '建立失敗');
+    }
+    showMessage('作業已成功建立！', 'success');
+    fetchAssignments();
     closeModal();
   } catch (error) {
     showMessage(error.message, 'error');
@@ -124,14 +125,13 @@ const handleSubmit = async () => {
 };
 
 const deleteAssignment = async (assignment) => {
-  if (!confirm(`確定要刪除作業「${assignment.title}」嗎？這將會刪除所有已繳交的檔案且無法復原。`)) return;
+  if (!confirm(`確定要刪除作業「${assignment.title}」嗎？這將會一併刪除所有學生已繳交的檔案。`)) return;
 
   try {
     const response = await fetch(`/api/assignments/${assignment.id}`, { method: 'DELETE' });
-    if (!response.ok) throw new Error('刪除作業失敗');
-    
-    assignments.value = assignments.value.filter(a => a.id !== assignment.id);
+    if (!response.ok) throw new Error('刪除失敗');
     showMessage('作業已成功刪除！', 'success');
+    fetchAssignments();
   } catch (error) {
     showMessage(error.message, 'error');
   }
@@ -139,3 +139,4 @@ const deleteAssignment = async (assignment) => {
 
 onMounted(fetchAssignments);
 </script>
+

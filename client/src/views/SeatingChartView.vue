@@ -1,202 +1,191 @@
 <!-- File Path: /client/src/views/SeatingChartView.vue -->
 <template>
-    <div>
-      <h1 class="text-3xl font-bold mb-6">座位表設定</h1>
-  
-      <!-- 設定區域 -->
-      <div class="bg-white p-6 rounded-lg shadow-md mb-8 flex items-center space-x-6">
-        <div>
-          <label for="rows" class="block text-sm font-medium text-gray-700">總行數：</label>
-          <input type="number" id="rows" v-model.number="layout.rows" @change="generateGrid" min="1" class="mt-1 block w-24 rounded-md border-gray-300 shadow-sm">
+  <div>
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold">座位表設定</h1>
+      <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-2">
+          <label for="rows">行 (Rows):</label>
+          <input type="number" id="rows" v-model.number="rows" min="1" class="w-16 p-1 border rounded">
         </div>
-        <div>
-          <label for="cols" class="block text-sm font-medium text-gray-700">總列數：</label>
-          <input type="number" id="cols" v-model.number="layout.cols" @change="generateGrid" min="1" class="mt-1 block w-24 rounded-md border-gray-300 shadow-sm">
+        <div class="flex items-center space-x-2">
+          <label for="cols">列 (Cols):</label>
+          <input type="number" id="cols" v-model.number="cols" min="1" class="w-16 p-1 border rounded">
         </div>
-        <button @click="saveLayout" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300 self-end">儲存座位表</button>
-         <div v-if="message.text" class="self-end text-sm" :class="message.type === 'success' ? 'text-green-600' : 'text-red-600'">
-          {{ message.text }}
-        </div>
+        <button @click="saveSeatingChart" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300">儲存座位表</button>
       </div>
-  
-      <!-- 主內容區域 -->
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <!-- 未安排學生列表 -->
-        <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
-          <h2 class="text-xl font-bold mb-4">未安排座位學生</h2>
+    </div>
+     <!-- 訊息提示框 -->
+    <div v-if="message.text" class="mb-4 p-4 rounded-md" :class="message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+      {{ message.text }}
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <!-- Unseated Students -->
+      <div class="md:col-span-1 bg-white p-4 rounded-lg shadow-md">
+        <h2 class="text-xl font-bold mb-4 border-b pb-2">未安排座位</h2>
+        <div 
+          @dragover.prevent 
+          @drop="handleDrop($event, 'unseated')"
+          class="h-96 overflow-y-auto space-y-2 p-2 bg-gray-50 rounded"
+        >
+          <div v-if="unseatedStudents.length === 0" class="text-gray-500 text-center pt-4">所有學生皆已安排座位</div>
           <div 
-            class="space-y-2 h-96 overflow-y-auto p-2 border rounded-md"
-            @dragover.prevent @drop="dropOnUnassigned"
+            v-for="student in unseatedStudents" 
+            :key="student.id"
+            :draggable="true"
+            @dragstart="handleDragStart($event, student)"
+            class="p-2 bg-white border rounded shadow-sm cursor-grab"
           >
-            <div 
-              v-for="student in unassignedStudents" 
-              :key="student.id"
-              :draggable="true"
-              @dragstart="dragStart(student, -1)"
-              class="p-3 bg-gray-100 rounded-md cursor-grab shadow-sm"
-            >
-              {{ student.name }} ({{ student.student_id }})
-            </div>
-             <div v-if="unassignedStudents.length === 0" class="text-gray-400 text-center pt-4">所有學生皆已安排座位</div>
+            {{ student.seat_number }}. {{ student.name }}
           </div>
         </div>
-  
-        <!-- 座位表網格 -->
-        <div class="lg:col-span-3 bg-white p-6 rounded-lg shadow-md">
-          <h2 class="text-xl font-bold mb-4">教室座位</h2>
-          <div class="grid gap-3" :style="{ gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))` }">
-            <div
-              v-for="(student, index) in layout.grid"
-              :key="index"
-              class="aspect-w-3 aspect-h-2 border-2 rounded-lg flex items-center justify-center p-2 text-center"
-              :class="{ 
-                'border-dashed border-gray-300': !student,
-                'border-blue-400 bg-blue-50': student,
-                'bg-yellow-100 border-yellow-400': isDragOverIndex === index
-              }"
-              @dragover.prevent="dragOver(index)"
-              @dragleave="dragLeave"
-              @drop="dropOnGrid(index)"
+      </div>
+
+      <!-- Seating Chart -->
+      <div class="md:col-span-3 bg-white p-4 rounded-lg shadow-md">
+        <h2 class="text-xl font-bold mb-4 border-b pb-2">教室座位</h2>
+         <div 
+          class="grid gap-2"
+          :style="{ 'grid-template-columns': `repeat(${cols}, minmax(0, 1fr))` }"
+        >
+          <div 
+            v-for="i in rows * cols" 
+            :key="i"
+            @dragover.prevent
+            @drop="handleDrop($event, i-1)"
+            class="h-24 border-2 border-dashed rounded-lg flex items-center justify-center text-gray-400"
+            :class="{ 'bg-blue-50 border-blue-300': seats[i-1] }"
+          >
+            <div 
+              v-if="seats[i-1]"
+              :draggable="true"
+              @dragstart="handleDragStart($event, seats[i-1])"
+              class="w-full h-full p-2 bg-blue-100 rounded text-center text-sm font-semibold text-blue-800 flex flex-col justify-center cursor-grab"
             >
-              <div 
-                v-if="student" 
-                class="w-full h-full cursor-grab"
-                :draggable="true"
-                @dragstart="dragStart(student, index)"
-              >
-                <p class="font-semibold text-sm">{{ student.name }}</p>
-                <p class="text-xs text-gray-500">{{ student.student_id }}</p>
-              </div>
-              <span v-else class="text-gray-400 text-sm">空位</span>
+              <span class="text-lg">{{ seats[i-1].name }}</span>
+              <span class="text-xs text-gray-600">{{ seats[i-1].student_id }}</span>
             </div>
+            <span v-else>{{ i-1 }}</span>
           </div>
         </div>
       </div>
     </div>
-  </template>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, computed, watch } from 'vue';
+
+const students = ref([]);
+const rows = ref(6);
+const cols = ref(5);
+const seats = ref({}); // key: seat index, value: student object
+const message = ref({ text: '', type: 'success' });
+
+const showMessage = (text, type = 'success', duration = 3000) => {
+  message.value = { text, type };
+  setTimeout(() => { message.value = { text: '', type: 'success' }; }, duration);
+};
+
+const fetchStudents = async () => {
+  try {
+    const response = await fetch('/api/students');
+    if (!response.ok) throw new Error('無法讀取學生列表');
+    students.value = await response.json();
+  } catch (error) {
+    showMessage(error.message, 'error');
+  }
+};
+
+const fetchSeatingChart = async () => {
+  try {
+    const response = await fetch('/api/seating-chart');
+    if (!response.ok) throw new Error('無法讀取座位表');
+    const data = await response.json();
+    rows.value = data.rows || 6;
+    cols.value = data.cols || 5;
+    seats.value = data.seats || {};
+  } catch (error) {
+    showMessage(error.message, 'error');
+  }
+};
+
+const seatedStudentIds = computed(() => {
+  return new Set(Object.values(seats.value).filter(Boolean).map(s => s.id));
+});
+
+const unseatedStudents = computed(() => {
+  return students.value.filter(s => !seatedStudentIds.value.has(s.id));
+});
+
+const handleDragStart = (event, student) => {
+  event.dataTransfer.setData('studentId', student.id);
+  event.dataTransfer.effectAllowed = 'move';
+};
+
+const handleDrop = (event, toSeatIndex) => {
+  const studentId = parseInt(event.dataTransfer.getData('studentId'), 10);
+  if (!studentId) return;
+
+  const draggedStudent = students.value.find(s => s.id === studentId);
+  if (!draggedStudent) return;
   
-  <script setup>
-  import { ref, onMounted, computed } from 'vue';
-  
-  const allStudents = ref([]);
-  const layout = ref({
-    rows: 5,
-    cols: 6,
-    grid: [],
-  });
-  const draggedItem = ref(null);
-  const isDragOverIndex = ref(null);
-  const message = ref({ text: '', type: 'success' });
-  
-  const showMessage = (text, type = 'success', duration = 3000) => {
-    message.value = { text, type };
-    setTimeout(() => { message.value = { text: '', type: 'success' }; }, duration);
-  };
-  
-  const unassignedStudents = computed(() => {
-    const assignedIds = new Set(layout.value.grid.filter(s => s).map(s => s.id));
-    return allStudents.value.filter(s => !assignedIds.has(s.id));
-  });
-  
-  const generateGrid = () => {
-    const newSize = layout.value.rows * layout.value.cols;
-    const newGrid = Array(newSize).fill(null);
-    // 保留舊的佈局中仍在範圍內的學生
-    for(let i = 0; i < Math.min(layout.value.grid.length, newGrid.length); i++) {
-      newGrid[i] = layout.value.grid[i];
+  // Find original seat of the dragged student
+  const fromSeatIndex = Object.keys(seats.value).find(key => seats.value[key] && seats.value[key].id === studentId);
+
+  // If dropping in the unseated list
+  if (toSeatIndex === 'unseated') {
+    if (fromSeatIndex) {
+      delete seats.value[fromSeatIndex];
     }
-    layout.value.grid = newGrid;
-  };
+    return;
+  }
   
-  const dragStart = (student, fromIndex) => {
-    draggedItem.value = { student, fromIndex };
-  };
-  
-  const dragOver = (index) => {
-    if (draggedItem.value) {
-      isDragOverIndex.value = index;
-    }
-  };
-  
-  const dragLeave = () => {
-    isDragOverIndex.value = null;
-  };
-  
-  const dropOnGrid = (toIndex) => {
-    if (!draggedItem.value) return;
-  
-    const { student, fromIndex } = draggedItem.value;
-    
-    // 目標位置的學生（如果有）
-    const targetStudent = layout.value.grid[toIndex];
-  
-    // 將拖曳的學生放到目標位置
-    layout.value.grid[toIndex] = student;
-  
-    if (fromIndex === -1) {
-      // 從未安排列表拖曳過來
-      // 如果目標位置有學生，該學生會被移出
-    } else {
-      // 在網格內交換
-      layout.value.grid[fromIndex] = targetStudent;
-    }
-  
-    draggedItem.value = null;
-    isDragOverIndex.value = null;
-  };
-  
-  const dropOnUnassigned = () => {
-    if (!draggedItem.value || draggedItem.value.fromIndex === -1) return;
-    
-    const { fromIndex } = draggedItem.value;
-    layout.value.grid[fromIndex] = null; // 從網格中移除
-    draggedItem.value = null;
-  };
-  
-  const fetchStudentsAndLayout = async () => {
-    try {
-      const [studentsRes, layoutRes] = await Promise.all([
-        fetch('/api/students'),
-        fetch('/api/seating-chart')
-      ]);
-      if (!studentsRes.ok || !layoutRes.ok) throw new Error('無法讀取資料');
-      
-      allStudents.value = await studentsRes.json();
-      const savedLayout = await layoutRes.json();
-      
-      // 將 student_id 轉換為完整的 student 物件
-      const studentMap = new Map(allStudents.value.map(s => [s.id, s]));
-      savedLayout.grid = savedLayout.grid.map(studentId => studentMap.get(studentId) || null);
-      
-      layout.value = savedLayout;
-      
-    } catch (error) {
-      showMessage(error.message, 'error');
-      generateGrid(); // 如果讀取失敗，產生預設網格
-    }
-  };
-  
-  const saveLayout = async () => {
-    try {
-      // 只儲存 student id，而不是整個 student 物件
-      const layoutToSave = {
-        ...layout.value,
-        grid: layout.value.grid.map(student => student ? student.id : null)
-      };
-      
-      const response = await fetch('/api/seating-chart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(layoutToSave)
-      });
-      if (!response.ok) throw new Error('儲存失敗');
-      showMessage('座位表已成功儲存！', 'success');
-    } catch (error) {
-      showMessage(error.message, 'error');
-    }
-  };
-  
-  
-  onMounted(fetchStudentsAndLayout);
-  </script>
-  
+  // Student at the destination seat (if any)
+  const targetStudent = seats.value[toSeatIndex];
+
+  // Place dragged student in the new seat
+  seats.value[toSeatIndex] = draggedStudent;
+
+  if (fromSeatIndex) {
+    // If there was a student at the destination, move them to the original seat
+    // Otherwise, clear the original seat
+    seats.value[fromSeatIndex] = targetStudent ? targetStudent : null;
+    if (!targetStudent) delete seats.value[fromSeatIndex];
+  }
+};
+
+const saveSeatingChart = async () => {
+  try {
+    const response = await fetch('/api/seating-chart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: rows.value, cols: cols.value, seats: seats.value })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || '儲存失敗');
+    showMessage(result.message, 'success');
+  } catch (error) {
+    showMessage(error.message, 'error');
+  }
+};
+
+watch([rows, cols], () => {
+    // When rows or cols change, we might have seats outside the new bounds.
+    // This is a simple cleanup. A more complex one might try to preserve seats.
+    const newTotalSeats = rows.value * cols.value;
+    Object.keys(seats.value).forEach(key => {
+        if (parseInt(key, 10) >= newTotalSeats) {
+            delete seats.value[key];
+        }
+    });
+});
+
+onMounted(async () => {
+  await fetchStudents();
+  await fetchSeatingChart();
+});
+
+</script>
+

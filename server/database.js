@@ -32,7 +32,6 @@ function initializeDatabase() {
         student_id INTEGER NOT NULL,
         record_date TEXT NOT NULL,
         status TEXT NOT NULL,
-        notes TEXT,
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
         UNIQUE(student_id, record_date)
     );
@@ -48,7 +47,7 @@ function initializeDatabase() {
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
     );
   `);
-
+  
   db.exec(`
     CREATE TABLE IF NOT EXISTS assignments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,6 +64,4 @@ function initializeDatabase() {
 }
 
 module.exports = initializeDatabase;
-
-
 
