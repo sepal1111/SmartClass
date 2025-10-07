@@ -409,6 +409,186 @@ app.post('/api/attendance', authenticateToken, jsonParser, (req, res) => { const
 app.post('/api/performance', authenticateToken, jsonParser, (req, res) => { const { student_id, date, points, reason } = req.body; db.prepare('INSERT INTO performance (student_id, date, points, reason, teacher_id) VALUES (?, ?, ?, ?, ?)').run(student_id, date, points, reason, req.user.id); res.status(201).json({ message: '課堂表現已記錄。' }); });
 
 
+// --- 遊戲式搶答競賽 (QuizRace) API ---
+app.get('/api/quiz-sets', authenticateToken, (req, res) => {
+    try {
+        const sets = db.prepare(`
+            SELECT qs.*, s.name as subject_name 
+            FROM quiz_sets qs
+            LEFT JOIN subjects s ON qs.subject_id = s.id
+            WHERE qs.teacher_id = ? 
+            ORDER BY qs.created_at DESC
+        `).all(req.user.id);
+        res.json(sets);
+    } catch (err) {
+        res.status(500).json({ error: '讀取測驗集失敗' });
+    }
+});
+
+app.post('/api/quiz-sets', authenticateToken, jsonParser, (req, res) => {
+    const { title, subject_id } = req.body;
+    if (!title) return res.status(400).json({ error: '測驗集標題為必填項。' });
+    try {
+        const info = db.prepare('INSERT INTO quiz_sets (title, subject_id, teacher_id) VALUES (?, ?, ?)')
+                       .run(title, subject_id, req.user.id);
+        const newSet = db.prepare(`
+            SELECT qs.*, s.name as subject_name 
+            FROM quiz_sets qs
+            LEFT JOIN subjects s ON qs.subject_id = s.id
+            WHERE qs.id = ?
+        `).get(info.lastInsertRowid);
+        res.status(201).json(newSet);
+    } catch (err) {
+        res.status(500).json({ error: '資料庫錯誤，建立測驗集失敗' });
+    }
+});
+
+app.put('/api/quiz-sets/:id', authenticateToken, jsonParser, (req, res) => {
+    const { title, subject_id } = req.body;
+    if (!title) return res.status(400).json({ error: '測驗集標題為必填項。' });
+    try {
+        const info = db.prepare('UPDATE quiz_sets SET title = ?, subject_id = ? WHERE id = ? AND teacher_id = ?')
+                       .run(title, subject_id, req.params.id, req.user.id);
+        if (info.changes === 0) return res.status(404).json({ error: '找不到測驗集或權限不足。' });
+        const updatedSet = db.prepare(`
+            SELECT qs.*, s.name as subject_name 
+            FROM quiz_sets qs
+            LEFT JOIN subjects s ON qs.subject_id = s.id
+            WHERE qs.id = ?
+        `).get(req.params.id);
+        res.json(updatedSet);
+    } catch (err) {
+        res.status(500).json({ error: '資料庫錯誤，更新測驗集失敗' });
+    }
+});
+
+app.delete('/api/quiz-sets/:id', authenticateToken, (req, res) => {
+    try {
+        const info = db.prepare('DELETE FROM quiz_sets WHERE id = ? AND teacher_id = ?')
+                       .run(req.params.id, req.user.id);
+        if (info.changes === 0) return res.status(404).json({ error: '找不到測驗集或權限不足。' });
+        res.json({ message: '測驗集已成功刪除。' });
+    } catch (err) {
+        res.status(500).json({ error: '資料庫錯誤，刪除測驗集失敗' });
+    }
+});
+
+app.get('/api/quiz-questions/:quiz_set_id', authenticateToken, (req, res) => {
+    try {
+        const questions = db.prepare('SELECT * FROM quiz_questions WHERE quiz_set_id = ? ORDER BY id ASC')
+                            .all(req.params.quiz_set_id);
+        questions.forEach(q => q.options = JSON.parse(q.options));
+        res.json(questions);
+    } catch (err) {
+        res.status(500).json({ error: '讀取題目失敗' });
+    }
+});
+
+app.post('/api/quiz-questions', authenticateToken, jsonParser, (req, res) => {
+    const { quiz_set_id, question_text, options, time_limit } = req.body;
+    if (!quiz_set_id || !options || !Array.isArray(options) || options.length < 2) {
+        return res.status(400).json({ error: '參數無效。' });
+    }
+    try {
+        const optionsString = JSON.stringify(options);
+        const info = db.prepare('INSERT INTO quiz_questions (quiz_set_id, question_text, options, time_limit) VALUES (?, ?, ?, ?)')
+                       .run(quiz_set_id, question_text, optionsString, time_limit);
+        const newQuestion = db.prepare('SELECT * FROM quiz_questions WHERE id = ?').get(info.lastInsertRowid);
+        newQuestion.options = JSON.parse(newQuestion.options);
+        res.status(201).json(newQuestion);
+    } catch (err) {
+        res.status(500).json({ error: '資料庫錯誤，建立題目失敗' });
+    }
+});
+
+app.put('/api/quiz-questions/:id', authenticateToken, jsonParser, (req, res) => {
+    const { question_text, options, time_limit } = req.body;
+     if (!options || !Array.isArray(options) || options.length < 2) {
+        return res.status(400).json({ error: '參數無效。' });
+    }
+    try {
+        const optionsString = JSON.stringify(options);
+        const info = db.prepare('UPDATE quiz_questions SET question_text = ?, options = ?, time_limit = ? WHERE id = ?')
+                       .run(question_text, optionsString, time_limit, req.params.id);
+        if (info.changes === 0) return res.status(404).json({ error: '找不到題目。' });
+        const updatedQuestion = db.prepare('SELECT * FROM quiz_questions WHERE id = ?').get(req.params.id);
+        updatedQuestion.options = JSON.parse(updatedQuestion.options);
+        res.json(updatedQuestion);
+    } catch (err) {
+        res.status(500).json({ error: '資料庫錯誤，更新題目失敗' });
+    }
+});
+
+app.delete('/api/quiz-questions/:id', authenticateToken, (req, res) => {
+    try {
+        const info = db.prepare('DELETE FROM quiz_questions WHERE id = ?').run(req.params.id);
+        if (info.changes === 0) return res.status(404).json({ error: '找不到題目。' });
+        res.json({ message: '題目已成功刪除。' });
+    } catch (err) {
+        res.status(500).json({ error: '資料庫錯誤，刪除題目失敗' });
+    }
+});
+
+app.post('/api/quiz-questions/import/:quiz_set_id', authenticateToken, fileImportUpload.single('file'), (req, res) => {
+    const { quiz_set_id } = req.params;
+    if (!req.file) {
+        return res.status(400).json({ error: '沒有上傳檔案。' });
+    }
+
+    try {
+        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { header: ["題目文字", "正確答案", "選項1", "選項2", "選項3", "選項4"] });
+        
+        // 移除標題行
+        data.shift();
+
+        if (data.length === 0) {
+             return res.status(400).json({ error: 'Excel 檔案中沒有題目資料。' });
+        }
+
+        const insertStmt = db.prepare('INSERT INTO quiz_questions (quiz_set_id, question_text, options, time_limit) VALUES (?, ?, ?, ?)');
+        
+        let importedCount = 0;
+        const transaction = db.transaction((questions) => {
+            for (const row of questions) {
+                const question_text = row['題目文字'];
+                const correct_answer_index = parseInt(row['正確答案'], 10) - 1;
+
+                const optionTexts = [row['選項1'], row['選項2'], row['選項3'], row['選項4']].filter(opt => opt != null && opt !== '');
+                
+                if (!question_text || isNaN(correct_answer_index) || optionTexts.length < 2) {
+                    console.log('Skipping invalid row:', row);
+                    continue; // 跳過格式不符的資料行
+                }
+
+                const options = optionTexts.map((text, index) => ({
+                    text: String(text),
+                    isCorrect: index === correct_answer_index
+                }));
+
+                // 確保至少有一個正確答案
+                if (!options.some(opt => opt.isCorrect)) {
+                     console.log('Skipping row with invalid correct answer index:', row);
+                    continue;
+                }
+
+                insertStmt.run(quiz_set_id, String(question_text), JSON.stringify(options), 20); // 預設 20 秒
+                importedCount++;
+            }
+        });
+
+        transaction(data);
+        
+        res.json({ message: `成功匯入 ${importedCount} 筆題目。` });
+
+    } catch (error) {
+        console.error('Import error:', error);
+        res.status(500).json({ error: '檔案處理失敗，請確認檔案格式是否正確。欄位應為：題目文字、正確答案、選項1、選項2...' });
+    }
+});
+
+
 // --- Socket.IO PingPong 邏輯 ---
 let pingPongRooms = {}; 
 
@@ -528,3 +708,5 @@ const PORT = 3000;
 server.listen(PORT, () => {
     console.log(`後端伺服器正在 http://localhost:${PORT} 運行`);
 });
+
+

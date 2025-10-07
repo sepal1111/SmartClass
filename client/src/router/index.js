@@ -10,6 +10,7 @@ import StudentDashboardView from '../views/StudentDashboardView.vue'
 import AuthView from '../views/AuthView.vue'
 import TeacherPingPongView from '../views/TeacherPingPongView.vue'
 import StudentPingPongView from '../views/StudentPingPongView.vue'
+import QuizManagerView from '../views/QuizManagerView.vue'
 
 
 const router = createRouter({
@@ -64,6 +65,12 @@ const router = createRouter({
       path: '/pingpong-teacher',
       name: 'pingpong-teacher',
       component: TeacherPingPongView,
+      meta: { requiresAuth: true, layout: 'default' }
+    },
+    {
+      path: '/quiz',
+      name: 'quiz-manager',
+      component: QuizManagerView,
       meta: { requiresAuth: true, layout: 'default' }
     },
 

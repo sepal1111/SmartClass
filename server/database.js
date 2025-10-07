@@ -133,6 +133,33 @@ const initDb = () => {
     );
   `;
 
+    // --- 新增：遊戲式搶答競賽 (QuizRace) 相關資料表 ---
+    // 測驗集
+    const createQuizSetsTable = `
+    CREATE TABLE IF NOT EXISTS quiz_sets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      subject_id INTEGER,
+      teacher_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL,
+      FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
+    );
+    `;
+
+    // 測驗題目
+    const createQuizQuestionsTable = `
+    CREATE TABLE IF NOT EXISTS quiz_questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      quiz_set_id INTEGER NOT NULL,
+      question_text TEXT,
+      options TEXT NOT NULL, -- JSON string: [{"text": "Option 1", "isCorrect": true}, ...]
+      time_limit INTEGER DEFAULT 20,
+      points_type TEXT DEFAULT 'standard', -- 'standard', 'double'
+      FOREIGN KEY (quiz_set_id) REFERENCES quiz_sets(id) ON DELETE CASCADE
+    );
+    `;
+
     db.exec(createTeachersTable);
     db.exec(createStudentsTable);
     db.exec(createSeatingChartsTable);
@@ -142,6 +169,8 @@ const initDb = () => {
     db.exec(createSubjectsTable);
     db.exec(createGradeItemsTable);
     db.exec(createGradesTable);
+    db.exec(createQuizSetsTable);
+    db.exec(createQuizQuestionsTable);
 
     // --- 新增：插入預設科目資料 ---
     const checkSubjects = db.prepare('SELECT COUNT(*) as count FROM subjects').get();
