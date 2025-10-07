@@ -133,7 +133,11 @@ const showMessage = (text, type = 'success', duration = 5000) => {
   }, duration);
 };
 
-const logout = () => { localStorage.clear(); router.push({ name: 'auth' }); };
+const logout = () => {
+  localStorage.clear(); // 清除所有本地存儲資料，確保完全登出
+  // 強制重新載入頁面到登入頁，確保所有狀態被重置
+  window.location.href = '/auth';
+};
 const goToPingPong = () => { router.push({ name: 'pingpong-student' }); };
 
 const fetchAssignments = async () => {
@@ -216,4 +220,3 @@ const changePassword = async () => {
 
 onMounted(fetchAssignments);
 </script>
-

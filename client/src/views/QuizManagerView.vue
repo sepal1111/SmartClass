@@ -21,7 +21,7 @@
         </div>
         <div class="mt-6 grid grid-cols-2 gap-3">
           <button @click="openQuestionsModal(set)" class="btn bg-slate-600 hover:bg-slate-700 w-full">管理題目</button>
-          <button class="btn btn-success w-full" disabled>開始競賽</button>
+          <router-link :to="{ name: 'quiz-game-teacher', params: { setId: set.id } }" class="btn btn-success w-full text-center">開始競賽</router-link>
         </div>
          <div class="mt-3 flex justify-end items-center text-sm">
             <button @click="openSetModal(set)" class="text-blue-500 hover:text-blue-700 font-medium">編輯資訊</button>

@@ -1,8 +1,18 @@
 <!-- File Path: /client/src/views/HomeView.vue -->
 <template>
   <div>
-    <h1 class="text-4xl font-bold text-slate-800 mb-2">歡迎使用智慧班級系統</h1>
-    <p class="text-lg text-slate-600 mb-8">您可以從左側導覽列選擇功能，或透過下方快速入口開始。</p>
+    <div class="flex justify-between items-start mb-8">
+        <div>
+            <h1 class="text-4xl font-bold text-slate-800 mb-2">歡迎使用智慧班級系統</h1>
+            <p class="text-lg text-slate-600">您可以從左側導覽列選擇功能，或透過下方快速入口開始。</p>
+        </div>
+        <button @click="showQrCode = true" class="btn btn-secondary flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6.5 6.5v1M4.5 12.5h-1M12 20.5v-1m7.5-6.5h1M4 12V6a2 2 0 012-2h6v6h6v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-2m-2-4h2m18 0h2M12 7.5h6.5M7.5 12v6.5m7.5-11h2" />
+            </svg>
+            顯示連線 QR Code
+        </button>
+    </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       <!-- 快速入口 1: 課堂儀表板 -->
@@ -35,14 +45,40 @@
         <router-link to="/grades" class="btn bg-amber-500 hover:bg-amber-600 mt-6 w-full text-center">登錄成績</router-link>
       </div>
     </div>
+
+    <!-- QR Code Modal -->
+    <div v-if="showQrCode" @click="showQrCode = false" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+        <div @click.stop class="bg-white p-8 rounded-2xl text-center">
+            <h3 class="text-2xl font-bold mb-4">學生連線網址</h3>
+            <img :src="qrCodeUrl" alt="Connection QR Code" class="w-80 h-80 md:w-96 md:h-96 lg:w-[500px] lg:h-[500px] mx-auto border-8 border-gray-200 rounded-lg">
+            <p class="mt-4 text-xl font-mono bg-gray-100 p-3 rounded-md">{{ serverUrl }}</p>
+            <p class="mt-2 text-gray-500">請學生使用手機掃描，或在瀏覽器輸入上方網址</p>
+        </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-// This component currently requires no specific script logic.
-// Navigation is handled by <router-link>.
+import { ref, onMounted, computed } from 'vue';
+import { authFetch } from '@/utils/api';
+
+const serverUrl = ref('');
+const showQrCode = ref(false);
+
+const qrCodeUrl = computed(() => {
+    if (!serverUrl.value) return '';
+    // The image requested is 512x512, fulfilling the "at least 500x500" requirement.
+    return `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(serverUrl.value)}`;
+});
+
+onMounted(async () => {
+    try {
+        const response = await authFetch('/api/server-info');
+        const data = await response.json();
+        serverUrl.value = data.url;
+    } catch (error) {
+        console.error("無法獲取伺服器資訊:", error);
+    }
+});
 </script>
 
-<style scoped>
-/* Scoped styles can be added here if needed */
-</style>

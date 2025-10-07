@@ -11,6 +11,8 @@ import AuthView from '../views/AuthView.vue'
 import TeacherPingPongView from '../views/TeacherPingPongView.vue'
 import StudentPingPongView from '../views/StudentPingPongView.vue'
 import QuizManagerView from '../views/QuizManagerView.vue'
+import QuizGameTeacher from '../views/QuizGameTeacher.vue'
+import QuizGameStudent from '../views/QuizGameStudent.vue'
 
 
 const router = createRouter({
@@ -73,6 +75,14 @@ const router = createRouter({
       component: QuizManagerView,
       meta: { requiresAuth: true, layout: 'default' }
     },
+    {
+      path: '/quiz/host/:setId',
+      name: 'quiz-game-teacher',
+      component: QuizGameTeacher,
+      props: true,
+      meta: { requiresAuth: true, layout: 'clean' } // 使用乾淨布局以獲得全螢幕體驗
+    },
+
 
     // --- 學生端路由 ---
     {
@@ -85,6 +95,12 @@ const router = createRouter({
       path: '/pingpong-student',
       name: 'pingpong-student',
       component: StudentPingPongView,
+      meta: { layout: 'clean' }
+    },
+    {
+      path: '/quiz/play',
+      name: 'quiz-game-student',
+      component: QuizGameStudent,
       meta: { layout: 'clean' }
     },
   ]
