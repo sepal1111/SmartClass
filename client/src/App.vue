@@ -2,7 +2,7 @@
 <template>
   <div v-if="layout === 'default' && teacherIsAuthenticated" class="flex h-screen bg-slate-50 font-sans">
     <!-- Sidebar Navigation -->
-    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col">
+    <aside class="w-60 bg-white border-r border-slate-200 flex flex-col">
       <div class="p-6 border-b border-slate-200">
         <h1 class="text-3xl font-bold text-sky-600">智慧班級</h1>
         <p class="text-base text-slate-500 mt-2">歡迎，{{ teacherInfo.name }} 老師</p>
@@ -115,4 +115,3 @@ onUnmounted(() => {
   @apply absolute left-0 top-2 bottom-2 w-1.5 bg-sky-500 rounded-r-full;
 }
 </style>
-

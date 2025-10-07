@@ -2,7 +2,7 @@
 <template>
   <div>
     <h1 class="text-4xl font-bold text-slate-800 mb-8">座位表設定</h1>
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
       
       <div class="lg:col-span-1 card h-full">
         <h2 class="text-2xl font-semibold mb-4">學生列表</h2>
@@ -19,23 +19,27 @@
         </div>
         <hr class="my-6">
         <h2 class="text-2xl font-semibold mb-4">版面設定</h2>
-        <div class="flex items-center space-x-4 mb-4">
-          <label>行:</label>
-          <input type="number" v-model.number="rows" min="1" max="20" class="form-input w-20 text-center">
-          <label>列:</label>
-          <input type="number" v-model.number="cols" min="1" max="20" class="form-input w-20 text-center">
+        <div class="space-y-3 mb-4">
+            <div class="flex items-center">
+              <label class="w-1/2 font-medium text-slate-700">行數:</label>
+              <input type="number" v-model.number="rows" min="1" max="20" class="form-input w-1/2 text-center">
+            </div>
+            <div class="flex items-center">
+              <label class="w-1/2 font-medium text-slate-700">列數:</label>
+              <input type="number" v-model.number="cols" min="1" max="20" class="form-input w-1/2 text-center">
+            </div>
         </div>
-        <button @click="autoArrangeBySeatNumber" class="w-full btn btn-success mb-3">
-          依座號自動排列
+        <button @click="autoArrangeBySeatNumber" class="w-full btn btn-success mb-3 px-0">
+          自動排列
         </button>
-         <button @click="saveSeatingChart" class="w-full btn btn-primary">
+         <button @click="saveSeatingChart" class="w-full btn btn-primary px-0">
           儲存座位表
         </button>
         <p v-if="successMessage" class="text-green-600 mt-2">{{ successMessage }}</p>
         <p v-if="error" class="text-red-600 mt-2">{{ error }}</p>
       </div>
 
-      <div class="lg:col-span-3 card p-4">
+      <div class="lg:col-span-4 card p-4">
         <div v-if="isLoading" class="text-center py-10">讀取中...</div>
         <div v-else :style="gridStyle" class="grid gap-4">
             <div v-for="i in (rows * cols)" :key="i"
@@ -56,6 +60,42 @@
         </div>
       </div>
     </div>
+
+    <!-- Confirmation Modal -->
+    <div v-if="isConfirmModalOpen" class="fixed z-10 inset-0 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="fixed inset-0 bg-gray-600 bg-opacity-75" @click="isConfirmModalOpen = false"></div>
+            <div class="bg-white rounded-lg shadow-xl transform transition-all max-w-lg w-full">
+                <div class="p-6">
+                    <div class="flex items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                                確認自動排列
+                            </h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    此操作將會覆蓋目前的座位表，您確定要依座號自動排列嗎？
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button @click="confirmAndArrange" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-yellow-500 text-base font-medium text-white hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        確認排列
+                    </button>
+                    <button @click="isConfirmModalOpen = false" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
   </div>
 </template>
 
@@ -72,8 +112,9 @@ const error = ref('');
 const successMessage = ref('');
 const searchTerm = ref('');
 const studentPhotos = ref(new Set());
+const isConfirmModalOpen = ref(false);
 
-const defaultAvatar = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NkY2RjZCI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgM2MxLjY2IDAgMyAxLjM0IDMgM3MtMS4zNCAzLTMgMy0zLTEuMzQtMy0zIDEuMzQtMyAzLTMzem0wIDE0LjJjLTIuNSAwLTQuNzEtMS4yOC02LTMuMjIuMDMtMS45OSA0LTMuMDggNi0zLjA4czUuOTcgMS4wOSA2IDMuMDhjLTEuMjkgMS45NC0zLjUgMy4yMi02IDMuMjJ6Ii8+PC9zdmc+";
+const defaultAvatar = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NkY2RjZCI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgM2MxLjY2IDAgMyAxLjM0IDMgM3MtMS4zNCAzLTMgMy0zLTEuMzQtMy0zIDEuMzQtMyAzLTMzem0wIDE0LjJjLTIuNSAwLTQuNzEtMS4yOC02LTMuMjIuMDMtMS40OSw0LTMuMDggNi0zLjA4czUuOTcgMS4wOSA2IDMuMDhjLTEuMjkgMS45NC0zLjUgMy4yMi02IDMuMjJ6Ii8+PC9zdmc+";
 
 const formatSeatNumber = (num) => {
   if (num === null || num === undefined) return '';
@@ -146,13 +187,17 @@ const saveSeatingChart = async () => {
 };
 
 const autoArrangeBySeatNumber = () => {
-    if (!confirm('此操作將會覆蓋目前的座位表，確定要依座號自動排列嗎？')) return;
+    isConfirmModalOpen.value = true;
+};
+
+const confirmAndArrange = () => {
     const sortedStudents = [...students.value].sort((a, b) => (Number(a.seat_number) || Infinity) - (Number(b.seat_number) || Infinity));
     const newSeats = {};
     for (let i = 0; i < rows.value * cols.value; i++) {
         newSeats[i] = sortedStudents[i] || null;
     }
     seats.value = newSeats;
+    isConfirmModalOpen.value = false;
 };
 
 onMounted(fetchAllData);

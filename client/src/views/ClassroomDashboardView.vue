@@ -1,7 +1,13 @@
 <!-- File Path: /client/src/views/ClassroomDashboardView.vue -->
 <template>
   <div>
-    <h1 class="text-4xl font-bold text-slate-800 mb-8">班級儀表板</h1>
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-4xl font-bold text-slate-800">班級儀表板</h1>
+      <div class="flex space-x-4">
+          <button @click="openAttendanceModal" class="btn btn-secondary px-4 py-2">批次登記</button>
+          <button @click="openAttendanceSummaryModal" class="btn bg-slate-600 hover:bg-slate-700 px-4 py-2">學期統計</button>
+      </div>
+    </div>
 
     <!-- 頂部資訊卡 -->
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
@@ -9,10 +15,6 @@
       <div class="card h-full">
         <div class="flex justify-between items-start mb-4">
           <h2 class="text-xl font-semibold text-slate-700">今日出缺席 ({{ today_display }})</h2>
-          <div class="flex space-x-2">
-              <button @click="openAttendanceModal" class="btn btn-secondary px-3 py-1 text-sm">批次登記</button>
-              <button @click="openAttendanceSummaryModal" class="btn bg-slate-600 hover:bg-slate-700 px-3 py-1 text-sm">學期統計</button>
-          </div>
         </div>
         <div v-if="isLoading" class="mt-2 text-center py-8">讀取中...</div>
         <div v-else class="grid grid-cols-3 gap-4 text-center">
