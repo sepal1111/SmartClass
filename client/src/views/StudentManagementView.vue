@@ -3,55 +3,62 @@
     <div>
       <h1 class="text-4xl font-bold text-slate-800 mb-8">學生管理</h1>
   
-      <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <div class="flex gap-4">
-          <button @click="openModal(null)" class="btn btn-primary text-base">新增學生</button>
-          <button @click="triggerFileUpload" class="btn bg-green-500 hover:bg-green-700 text-base">從檔案匯入</button>
-          <button @click="triggerPhotoUpload" class="btn bg-orange-500 hover:bg-orange-700 text-base">上傳學生照片</button>
-          <input type="file" ref="fileInput" @change="handleFileSelect" class="hidden" accept=".xlsx, .xls, .csv">
-          <input type="file" ref="photoInput" @change="handlePhotoUpload" multiple class="hidden" accept="image/jpeg, image/png">
+      <div class="card p-8">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+          <div class="flex gap-4 flex-wrap">
+            <button @click="openModal(null)" class="btn btn-primary">
+              新增學生
+            </button>
+            <div>
+              <input type="file" ref="fileInput" @change="handleFileSelect" class="hidden" accept=".xlsx, .xls, .csv">
+              <button @click="triggerFileUpload" class="btn btn-success">
+                從檔案匯入
+              </button>
+            </div>
+            <div>
+              <input type="file" ref="photoInput" @change="handlePhotoUpload" multiple class="hidden" accept="image/jpeg, image/png">
+              <button @click="triggerPhotoUpload" class="btn bg-orange-500 hover:bg-orange-600">
+                上傳學生照片
+              </button>
+            </div>
+          </div>
+          <div class="w-full md:w-1/3">
+            <input type="text" v-model="searchTerm" placeholder="搜尋姓名、學號、帳號..." class="form-input w-full text-base py-2">
+          </div>
         </div>
-        <div class="w-full md:w-1/3">
-          <input type="text" v-model="searchTerm" placeholder="搜尋姓名、學號、帳號..." class="form-input w-full text-base">
-        </div>
-      </div>
-      
-       <div v-if="error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
-        <p class="font-bold">發生錯誤：</p>
-        <p>{{ error }}</p>
-       </div>
-       <div v-if="successMessage" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
-          <p>{{ successMessage }}</p>
-       </div>
+        
+         <p v-if="error" class="text-red-500 mb-4">{{ error }}</p>
+         <p v-if="successMessage" class="text-green-500 mb-4">{{ successMessage }}</p>
   
-      <div class="card overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-slate-50">
-            <tr>
-              <th @click="sortBy('student_id')" class="table-header">學號 <span v-if="sortKey === 'student_id'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></th>
-              <th @click="sortBy('name')" class="table-header">姓名 <span v-if="sortKey === 'name'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></th>
-              <th @click="sortBy('class')" class="table-header">班級 <span v-if="sortKey === 'class'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></th>
-              <th @click="sortBy('seat_number')" class="table-header">座號 <span v-if="sortKey === 'seat_number'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></th>
-              <th @click="sortBy('account')" class="table-header">帳號 <span v-if="sortKey === 'account'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></th>
-              <th class="px-6 py-4 text-right text-sm font-medium text-slate-500 uppercase tracking-wider">操作</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-             <tr v-if="isLoading"><td colspan="6" class="text-center py-8 text-slate-500">正在載入學生資料...</td></tr>
-              <tr v-else-if="filteredAndSortedStudents.length === 0"><td colspan="6" class="text-center py-8 text-slate-500">找不到符合條件的學生。</td></tr>
-            <tr v-for="student in filteredAndSortedStudents" :key="student.id" class="hover:bg-slate-50">
-              <td class="table-cell">{{ student.student_id }}</td>
-              <td class="table-cell font-medium text-slate-900">{{ student.name }}</td>
-              <td class="table-cell">{{ student.class }}</td>
-              <td class="table-cell">{{ student.seat_number }}</td>
-              <td class="table-cell">{{ student.account }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-base font-medium">
-                <a href="#" @click.prevent="openModal(student)" class="text-sky-600 hover:text-sky-900">編輯</a>
-                <a href="#" @click.prevent="deleteStudent(student.id)" class="text-red-600 hover:text-red-900 ml-6">刪除</a>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-slate-50">
+              <tr>
+                <th @click="sortBy('student_id')" class="table-header cursor-pointer">學號 <span v-if="sortKey === 'student_id'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></th>
+                <th @click="sortBy('name')" class="table-header cursor-pointer">姓名 <span v-if="sortKey === 'name'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></th>
+                <th @click="sortBy('class')" class="table-header cursor-pointer">班級 <span v-if="sortKey === 'class'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></th>
+                <th @click="sortBy('seat_number')" class="table-header cursor-pointer">座號 <span v-if="sortKey === 'seat_number'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></th>
+                <th @click="sortBy('account')" class="table-header cursor-pointer">帳號 <span v-if="sortKey === 'account'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></th>
+                <th class="table-header text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+               <tr v-if="isLoading"><td colspan="6" class="text-center py-4">正在載入學生資料...</td></tr>
+                <tr v-else-if="filteredAndSortedStudents.length === 0"><td colspan="6" class="text-center py-4 text-gray-500">找不到符合條件的學生。</td></tr>
+              <tr v-for="student in filteredAndSortedStudents" :key="student.id" class="hover:bg-slate-50">
+                <td class="table-cell">{{ student.student_id }}</td>
+                <td class="table-cell font-medium">{{ student.name }}</td>
+                <td class="table-cell">{{ student.class }}</td>
+                <td class="table-cell">{{ formatSeatNumber(student.seat_number) }}</td>
+                <td class="table-cell">{{ student.account }}</td>
+                <td class="table-cell text-right">
+                  <button @click.prevent="openModal(student)" class="text-indigo-600 hover:text-indigo-900 font-medium">編輯</button>
+                  <button @click.prevent="deleteStudent(student.id)" class="text-red-600 hover:text-red-900 ml-4 font-medium">刪除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
   
       <div v-if="isModalOpen" class="fixed z-10 inset-0 overflow-y-auto">
@@ -59,52 +66,52 @@
               <div class="fixed inset-0 bg-gray-500 opacity-75" @click="isModalOpen = false"></div>
               <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all max-w-lg w-full">
                   <form @submit.prevent="handleSubmit">
-                      <div class="bg-white px-4 pt-5 pb-4 sm:p-8">
-                          <h3 class="text-2xl leading-6 font-bold text-slate-900 mb-6">{{ editingStudent ? '編輯學生' : '新增學生' }}</h3>
-                          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                          <h3 class="text-lg leading-6 font-medium text-gray-900">{{ editingStudent ? '編輯學生' : '新增學生' }}</h3>
+                          <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                              <div>
-                                  <label class="form-label">學號</label>
-                                  <input type="text" v-model="form.student_id" required class="form-input mt-1">
+                                  <label class="block text-sm font-medium text-gray-700">學號</label>
+                                  <input type="text" v-model="form.student_id" required class="mt-1 form-input">
                               </div>
                               <div>
-                                  <label class="form-label">姓名</label>
-                                  <input type="text" v-model="form.name" required class="form-input mt-1">
+                                  <label class="block text-sm font-medium text-gray-700">姓名</label>
+                                  <input type="text" v-model="form.name" required class="mt-1 form-input">
                               </div>
                                <div>
-                                  <label class="form-label">帳號</label>
-                                  <input type="text" v-model="form.account" required class="form-input mt-1">
+                                  <label class="block text-sm font-medium text-gray-700">帳號</label>
+                                  <input type="text" v-model="form.account" required class="mt-1 form-input">
                               </div>
                               <div>
-                                  <label class="form-label">密碼 ({{ editingStudent ? '留空表示不變更' : '必填' }})</label>
-                                  <input type="password" v-model="form.password" :required="!editingStudent" class="form-input mt-1">
+                                  <label class="block text-sm font-medium text-gray-700">密碼 ({{ editingStudent ? '留空表示不變更' : '必填' }})</label>
+                                  <input type="password" v-model="form.password" :required="!editingStudent" class="mt-1 form-input">
                               </div>
                               <div>
-                                  <label class="form-label">班級</label>
-                                  <input type="text" v-model="form.class" class="form-input mt-1">
+                                  <label class="block text-sm font-medium text-gray-700">班級</label>
+                                  <input type="text" v-model="form.class" class="mt-1 form-input">
                               </div>
                               <div>
-                                  <label class="form-label">座號</label>
-                                  <input type="number" v-model="form.seat_number" class="form-input mt-1">
+                                  <label class="block text-sm font-medium text-gray-700">座號</label>
+                                  <input type="number" v-model="form.seat_number" class="mt-1 form-input">
                               </div>
                                <div class="sm:col-span-2">
-                                  <label class="form-label">性別</label>
-                                  <input type="text" v-model="form.gender" class="form-input mt-1">
+                                  <label class="block text-sm font-medium text-gray-700">性別</label>
+                                  <input type="text" v-model="form.gender" class="mt-1 form-input">
                               </div>
                                <p v-if="modalError" class="text-red-500 text-sm sm:col-span-2">{{ modalError }}</p>
                           </div>
                       </div>
-                      <div class="bg-gray-50 px-4 py-4 sm:px-6 sm:flex sm:flex-row-reverse">
-                          <button type="submit" class="btn btn-primary w-full sm:w-auto text-base">儲存</button>
-                          <button type="button" @click="isModalOpen = false" class="btn btn-secondary mt-3 sm:mt-0 sm:mr-3 w-full sm:w-auto text-base">取消</button>
+                      <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                          <button type="submit" class="btn btn-primary w-full sm:w-auto">儲存</button>
+                          <button type="button" @click="isModalOpen = false" class="btn btn-secondary mt-2 sm:mt-0 sm:ml-3 w-full sm:w-auto">取消</button>
                       </div>
                   </form>
               </div>
           </div>
       </div>
     </div>
-  </template>
+</template>
   
-  <script setup>
+<script setup>
   import { ref, onMounted, computed } from 'vue';
   import { authFetch } from '@/utils/api';
   
@@ -122,6 +129,11 @@
   const searchTerm = ref('');
   const sortKey = ref('seat_number');
   const sortOrder = ref('asc');
+
+  const formatSeatNumber = (num) => {
+    if (num === null || num === undefined) return '';
+    return String(num).padStart(2, '0');
+  };
   
   const filteredAndSortedStudents = computed(() => {
       let result = students.value;
@@ -241,16 +253,14 @@
   };
   
   onMounted(fetchStudents);
-  </script>
-  
-  <style scoped>
-  .table-header {
-      @apply px-6 py-4 text-left text-sm font-medium text-slate-500 uppercase tracking-wider cursor-pointer;
-  }
-  .table-cell {
-      @apply px-6 py-4 whitespace-nowrap text-base text-slate-700;
-  }
-  .form-label {
-      @apply block text-base font-medium text-slate-700;
-  }
-  </style>
+</script>
+
+<style scoped>
+.table-header {
+    @apply px-6 py-3 text-left text-sm font-medium text-slate-500 uppercase tracking-wider;
+}
+.table-cell {
+    @apply px-6 py-4 whitespace-nowrap text-base text-slate-700;
+}
+</style>
+

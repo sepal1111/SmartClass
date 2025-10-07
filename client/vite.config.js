@@ -21,8 +21,13 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
-      // 新增：照片路徑的代理規則
+      // 照片路徑的代理規則
       '/photos': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      // 新增：學生上傳作業的路徑代理規則
+      '/uploads': {
         target: 'http://localhost:3000',
         changeOrigin: true,
       }

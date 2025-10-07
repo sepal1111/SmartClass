@@ -61,7 +61,10 @@ const initDb = () => {
       title TEXT NOT NULL,
       description TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      due_date DATETIME
+      due_date DATETIME,
+      subject_id INTEGER,
+      allow_resubmission INTEGER DEFAULT 1, -- 1 for true, 0 for false
+      FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
     );
   `;
 
@@ -156,3 +159,4 @@ const initDb = () => {
 initDb();
 
 module.exports = db;
+
