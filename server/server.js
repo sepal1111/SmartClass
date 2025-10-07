@@ -145,117 +145,120 @@ app.post('/api/attendance', authenticateToken, jsonParser, (req, res) => { const
 app.post('/api/performance', authenticateToken, jsonParser, (req, res) => { const { student_id, date, points, reason } = req.body; db.prepare('INSERT INTO performance (student_id, date, points, reason, teacher_id) VALUES (?, ?, ?, ?, ?)').run(student_id, date, points, reason, req.user.id); res.status(201).json({ message: '課堂表現已記錄。' }); });
 
 
-// --- 新增：Socket.IO PingPong 邏輯 ---
-let pingPongRooms = {}; // 在記憶體中儲存所有活動房間的狀態
+// --- Socket.IO PingPong 邏輯 ---
+let pingPongRooms = {}; 
+
+const endAnswering = (roomCode) => {
+    const room = pingPongRooms[roomCode];
+    if (room && room.state === 'question') {
+        room.state = 'results';
+        console.log(`[${roomCode}] 作答結束`);
+        io.to(roomCode).emit('question:ended', room.answers);
+    }
+};
 
 io.on('connection', (socket) => {
     console.log('一個客戶端已連線:', socket.id);
 
-    // 老師建立房間
     socket.on('teacher:createRoom', (callback) => {
         let roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         while(pingPongRooms[roomCode]) {
             roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         }
-        
         socket.join(roomCode);
         pingPongRooms[roomCode] = {
             teacherId: socket.id,
             students: [],
             question: null,
             answers: {},
-            state: 'waiting' // waiting, question, results
+            state: 'waiting'
         };
-        
         console.log(`[${roomCode}] 老師 ${socket.id} 已建立房間`);
         callback({ roomCode });
     });
 
-    // 學生加入房間
     socket.on('student:joinRoom', ({ roomCode, name }, callback) => {
         const room = pingPongRooms[roomCode];
-        if (!room) {
-            return callback({ success: false, message: '找不到這個房間代碼。' });
-        }
-        if (room.state !== 'waiting') {
-            return callback({ success: false, message: '活動已經開始，無法加入。' });
-        }
+        if (!room) return callback({ success: false, message: '找不到房間代碼。' });
+        if (room.state !== 'waiting') return callback({ success: false, message: '活動已開始，無法加入。' });
 
         socket.join(roomCode);
-        const newStudent = { id: socket.id, name };
-        room.students.push(newStudent);
-        
-        console.log(`[${roomCode}] 學生 ${name} (${socket.id}) 已加入`);
-        io.to(room.teacherId).emit('student:joined', room.students); // 通知老師有新學生加入
-        callback({ success: true, message: '成功加入房間！' });
+        room.students.push({ id: socket.id, name });
+        console.log(`[${roomCode}] 學生 ${name} 已加入`);
+        io.to(room.teacherId).emit('student:joined', room.students);
+        callback({ success: true });
     });
 
-    // 老師開始一個問題
     socket.on('teacher:startQuestion', ({ roomCode, question }) => {
         const room = pingPongRooms[roomCode];
         if (room && room.teacherId === socket.id) {
             room.state = 'question';
             room.question = question;
-            room.answers = {}; // 清空上一題的答案
-            
-            console.log(`[${roomCode}] 老師開始提問:`, question.text);
-            io.to(roomCode).except(room.teacherId).emit('question:started', question); // 向所有學生廣播問題
+            room.answers = {};
+            console.log(`[${roomCode}] 老師開始提問`);
+            io.to(roomCode).except(room.teacherId).emit('question:started', question);
             io.to(room.teacherId).emit('teacher:questionStarted');
         }
     });
 
-    // 學生提交答案
     socket.on('student:submitAnswer', ({ roomCode, answer }) => {
         const room = pingPongRooms[roomCode];
         if (room && room.state === 'question') {
             const student = room.students.find(s => s.id === socket.id);
-            if (student) {
+            if (student && !room.answers[socket.id]) { // 防止重複作答
                 room.answers[socket.id] = { name: student.name, answer };
-                
-                console.log(`[${roomCode}] 學生 ${student.name} 回答了:`, answer);
-                // 即時將作答情況回傳給老師
+                console.log(`[${roomCode}] 學生 ${student.name} 回答了`);
                 io.to(room.teacherId).emit('student:answered', room.answers);
+                
+                // 檢查是否所有人都已回答
+                if (Object.keys(room.answers).length === room.students.length) {
+                    endAnswering(roomCode);
+                }
             }
         }
     });
+
+    socket.on('teacher:stopAnswering', ({ roomCode }) => {
+        const room = pingPongRooms[roomCode];
+        if (room && room.teacherId === socket.id) {
+            endAnswering(roomCode);
+        }
+    });
     
-    // 老師結束活動
     socket.on('teacher:endActivity', ({ roomCode }) => {
         const room = pingPongRooms[roomCode];
         if (room && room.teacherId === socket.id) {
             console.log(`[${roomCode}] 老師結束了活動`);
-            io.to(roomCode).emit('activity:ended'); // 通知所有人活動結束
-            delete pingPongRooms[roomCode]; // 從記憶體中刪除房間
+            io.to(roomCode).emit('activity:ended');
+            delete pingPongRooms[roomCode];
         }
     });
 
-
-    // 處理斷線
     socket.on('disconnect', () => {
         console.log('一個客戶端已斷線:', socket.id);
-        // 檢查斷線的是老師還是學生
         for (const roomCode in pingPongRooms) {
             const room = pingPongRooms[roomCode];
-            // 如果是老師斷線
             if (room.teacherId === socket.id) {
                 console.log(`[${roomCode}] 老師斷線，關閉房間。`);
                 io.to(roomCode).emit('activity:ended', '老師已離線，活動結束。');
                 delete pingPongRooms[roomCode];
                 break;
             }
-            // 如果是學生斷線
             const studentIndex = room.students.findIndex(s => s.id === socket.id);
             if (studentIndex !== -1) {
                 const studentName = room.students[studentIndex].name;
                 room.students.splice(studentIndex, 1);
                 console.log(`[${roomCode}] 學生 ${studentName} 已離線`);
-                io.to(room.teacherId).emit('student:left', room.students); // 通知老師學生列表更新
+                io.to(room.teacherId).emit('student:left', room.students);
+                // 如果學生離線後，剛好所有人都答完了
+                if (room.state === 'question' && Object.keys(room.answers).length === room.students.length && room.students.length > 0) {
+                    endAnswering(roomCode);
+                }
                 break;
             }
         }
     });
 });
-
 
 const PORT = 3000;
 server.listen(PORT, () => {

@@ -1,5 +1,6 @@
 // File Path: /client/src/main.js
 import './assets/main.css'
+import './assets/style.css' // 引入新的全域樣式檔案
 
 import { createApp } from 'vue'
 import App from './App.vue'
