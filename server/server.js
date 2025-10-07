@@ -40,14 +40,28 @@ app.use('/photos', express.static(photosDirectory));
 
 // --- Multer 設定 ---
 const fileImportUpload = multer({ storage: multer.memoryStorage() });
+
 const studentWorkUpload = multer({ 
     storage: multer.diskStorage({
-        destination: uploadsDirectory,
+        destination: (req, file, cb) => {
+            const { assignmentId } = req.params;
+            const assignment = db.prepare('SELECT title FROM assignments WHERE id = ?').get(assignmentId);
+            const assignmentTitle = assignment ? assignment.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '') : 'misc';
+            const assignmentDir = path.join(uploadsDirectory, assignmentTitle);
+            if (!fs.existsSync(assignmentDir)) {
+                fs.mkdirSync(assignmentDir, { recursive: true });
+            }
+            cb(null, assignmentDir);
+        },
         filename: (req, file, cb) => {
             const studentInfo = db.prepare('SELECT student_id, name FROM students WHERE id = ?').get(req.user.id);
             if (!studentInfo) return cb(new Error('找不到學生資料'), null);
-            const originalName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
-            cb(null, `${studentInfo.student_id}_${studentInfo.name}_${originalName}`);
+            
+            // 使用 Buffer 來正確處理 UTF-8 文件名
+            const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+            const sanitizedOriginalName = originalName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5.\-_]/g, '');
+
+            cb(null, `${studentInfo.student_id}_${studentInfo.name}_${sanitizedOriginalName}`);
         }
     }) 
 });
@@ -119,7 +133,7 @@ app.post('/api/students/photos/upload', authenticateToken, photoUpload.array('ph
 app.get('/api/students/photos', authenticateToken, (req, res) => { try { res.json(fs.readdirSync(photosDirectory)); } catch (error) { res.status(500).json({ error: '無法讀取照片列表。' }); } });
 // --- 學生端專用 API ---
 app.get('/api/student/assignments', authenticateToken, (req, res) => { if (req.user.type !== 'student') return res.status(403).json({ error: '僅學生可訪問' }); res.json(db.prepare('SELECT * FROM assignments WHERE due_date IS NOT NULL AND due_date > CURRENT_TIMESTAMP ORDER BY due_date ASC').all()); });
-app.post('/api/student/upload', authenticateToken, studentWorkUpload.single('file'), (req, res) => { if (req.user.type !== 'student') return res.status(403).json({ error: '僅學生可訪問' }); if (!req.file) return res.status(400).json({ error: '沒有上傳檔案。' }); res.json({ message: `檔案 ${req.file.filename} 已成功上傳！` }); });
+app.post('/api/student/upload/:assignmentId', authenticateToken, studentWorkUpload.single('file'), (req, res) => { if (req.user.type !== 'student') return res.status(403).json({ error: '僅學生可訪問' }); if (!req.file) return res.status(400).json({ error: '沒有上傳檔案。' }); res.json({ message: `檔案 ${req.file.filename} 已成功上傳！` }); });
 app.post('/api/student/change-password', authenticateToken, jsonParser, (req, res) => { if (req.user.type !== 'student') return res.status(403).json({ error: '僅學生可操作。' }); const { currentPassword, newPassword } = req.body; if (!currentPassword || !newPassword || newPassword.length < 6) return res.status(400).json({ error: '密碼格式不符，新密碼長度至少需要 6 個字元。' }); const student = db.prepare('SELECT * FROM students WHERE id = ?').get(req.user.id); if (!student || !bcrypt.compareSync(currentPassword, student.password)) return res.status(401).json({ error: '目前的密碼不正確。' }); try { const newHashedPassword = bcrypt.hashSync(newPassword, 10); db.prepare('UPDATE students SET password = ? WHERE id = ?').run(newHashedPassword, req.user.id); res.json({ message: '密碼已成功更新！' }); } catch (err) { res.status(500).json({ error: '資料庫錯誤，更新密碼失敗。' }); } });
 // --- 成績管理 API ---
 app.get('/api/subjects', authenticateToken, (req, res) => { res.json(db.prepare('SELECT * FROM subjects ORDER BY id ASC').all()); });
@@ -131,7 +145,27 @@ app.post('/api/grade-items', authenticateToken, jsonParser, (req, res) => { cons
 app.delete('/api/grade-items/:id', authenticateToken, (req, res) => { const info = db.prepare('DELETE FROM grade_items WHERE id = ?').run(req.params.id); if (info.changes === 0) return res.status(404).json({ error: '找不到指定的成績項目。' }); res.json({ message: '成績項目已成功刪除。' }); });
 app.get('/api/grades/:grade_item_id', authenticateToken, (req, res) => { const { grade_item_id } = req.params; const students = db.prepare('SELECT id, student_id, name, seat_number FROM students ORDER BY seat_number ASC, student_id ASC').all(); const grades = db.prepare('SELECT student_id, score FROM grades WHERE grade_item_id = ?').all(grade_item_id); const gradeMap = new Map(grades.map(g => [g.student_id, g.score])); const result = students.map(s => ({ ...s, score: gradeMap.get(s.student_id) ?? null })); res.json(result); });
 app.post('/api/grades', authenticateToken, jsonParser, (req, res) => { const { grade_item_id, student_id, score } = req.body; if (!grade_item_id || !student_id) return res.status(400).json({ error: '缺少必要參數。' }); const finalScore = score === '' || score === null ? null : Number(score); const stmt = db.prepare(`INSERT INTO grades (grade_item_id, student_id, score) VALUES (?, ?, ?) ON CONFLICT(grade_item_id, student_id) DO UPDATE SET score = excluded.score`); stmt.run(grade_item_id, student_id, finalScore); res.status(200).json({ message: '成績已更新' }); });
-app.get('/api/performance-summary', authenticateToken, (req, res) => { const stmt = db.prepare(`SELECT s.id, s.student_id, s.name, s.seat_number, SUM(COALESCE(p.points, 0)) as total_score FROM students s LEFT JOIN performance p ON s.student_id = p.student_id GROUP BY s.id, s.student_id, s.name, s.seat_number ORDER BY s.seat_number ASC, s.student_id ASC`); res.json(stmt.all()); });
+
+app.get('/api/performance-summary', authenticateToken, (req, res) => {
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+        return res.status(400).json({ error: '必須提供開始與結束日期。' });
+    }
+    const stmt = db.prepare(`
+        SELECT 
+            s.id, 
+            s.student_id, 
+            s.name, 
+            s.seat_number, 
+            SUM(COALESCE(p.points, 0)) as total_score 
+        FROM students s 
+        LEFT JOIN performance p ON s.student_id = p.student_id AND p.date BETWEEN ? AND ?
+        GROUP BY s.id, s.student_id, s.name, s.seat_number 
+        ORDER BY s.seat_number ASC, s.student_id ASC
+    `);
+    res.json(stmt.all(startDate, endDate));
+});
+
 // --- 學期出缺席統計 API ---
 app.get('/api/attendance-summary', authenticateToken, (req, res) => { const { startDate, endDate } = req.query; if (!startDate || !endDate) return res.status(400).json({ error: '必須提供開始與結束日期。' }); try { const stmt = db.prepare(` SELECT s.student_id, s.name, s.seat_number, SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present, SUM(CASE WHEN a.status = 'sick' THEN 1 ELSE 0 END) as sick, SUM(CASE WHEN a.status = 'official' THEN 1 ELSE 0 END) as official, SUM(CASE WHEN a.status = 'personal' THEN 1 ELSE 0 END) as personal, SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as absent FROM students s LEFT JOIN attendance a ON s.student_id = a.student_id AND a.date BETWEEN ? AND ? GROUP BY s.student_id, s.name, s.seat_number ORDER BY s.seat_number ASC, s.student_id ASC `); res.json(stmt.all(startDate, endDate)); } catch (err) { res.status(500).json({ error: '讀取學期出缺席統計失敗。' }); } });
 // --- 其他 API (座位表, 儀表板) ---

@@ -1,185 +1,246 @@
 <!-- File Path: /client/src/views/GradeManagementView.vue -->
 <template>
     <div>
-      <h1 class="text-3xl font-bold mb-6">成績管理</h1>
+      <h1 class="text-4xl font-bold text-slate-800 mb-8">成績管理</h1>
   
-      <div class="mb-6 border-b border-gray-200">
+      <div class="mb-8 border-b border-gray-200">
           <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-              <a v-for="tab in tabs" :key="tab.name" @click="currentTab = tab.key"
-                 :class="[currentTab === tab.key ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300', 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm cursor-pointer']">
+              <a v-for="tab in tabs" :key="tab.key" @click="currentTab = tab.key"
+                 :class="[currentTab === tab.key ? 'border-sky-500 text-sky-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300', 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg cursor-pointer']">
                   {{ tab.name }}
               </a>
           </nav>
       </div>
-  
-      <!-- 成績登錄 -->
-      <div v-if="currentTab === 'entry'">
-         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 border rounded-lg bg-gray-50">
-              <div>
-                  <label class="block text-sm font-medium text-gray-700">1. 選擇成績類別</label>
-                  <select v-model="filter.category" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                      <option value="平時測驗">平時測驗</option>
-                      <option value="定期評量">定期評量</option>
-                  </select>
-              </div>
-               <div>
-                  <label class="block text-sm font-medium text-gray-700">2. 選擇科目</label>
-                  <select v-model="filter.subject_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+
+      <!-- Tab Content -->
+      <div v-if="currentTab === 'performance'">
+        <div class="card p-8">
+            <h2 class="text-2xl font-semibold mb-6">課堂表現區間統計</h2>
+            <div class="flex items-center space-x-4 mb-6 p-4 bg-slate-100 rounded-md">
+                <label for="startDate" class="text-base font-medium">開始日期:</label>
+                <input type="date" id="startDate" v-model="performanceDateRange.start" class="form-input text-base">
+                <label for="endDate" class="text-base font-medium">結束日期:</label>
+                <input type="date" id="endDate" v-model="performanceDateRange.end" class="form-input text-base">
+                <button @click="fetchPerformanceSummary" class="btn btn-primary text-base py-2 px-6">查詢</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-slate-50"><tr><th class="table-header">座號</th><th class="table-header">姓名</th><th class="table-header">區間總分</th></tr></thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                      <tr v-if="performanceLoading" ><td colspan="3" class="text-center py-8 text-slate-500">正在讀取統計資料...</td></tr>
+                      <tr v-for="student in performanceSummary" :key="student.id" class="hover:bg-slate-50">
+                          <td class="table-cell">{{ student.seat_number }}</td>
+                          <td class="table-cell font-medium">{{ student.name }}</td>
+                          <td class="table-cell text-xl font-bold" :class="student.total_score > 0 ? 'text-green-600' : student.total_score < 0 ? 'text-red-600' : 'text-slate-700'">{{ student.total_score }}</td>
+                      </tr>
+                  </tbody>
+              </table>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="currentTab === 'quiz' || currentTab === 'assessment'">
+        <div class="flex space-x-4 mb-6">
+            <button @click="gradeMode = 'edit'" :class="['btn text-lg px-8 py-3', gradeMode === 'edit' ? 'btn-primary' : 'btn-secondary']">登錄/修改成績</button>
+            <button @click="gradeMode = 'manage'" :class="['btn text-lg px-8 py-3', gradeMode === 'manage' ? 'btn-primary' : 'btn-secondary']">管理成績項目</button>
+        </div>
+
+        <!-- Mode: Edit/Enter Grades -->
+        <div v-if="gradeMode === 'edit'">
+            <div class="card grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 p-6">
+                <div>
+                  <label class="block text-base font-medium text-slate-700">1. 選擇科目</label>
+                  <select v-model="filter.subject_id" class="mt-1 form-input text-lg py-3">
                       <option v-for="subject in subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
                   </select>
-              </div>
-              <div>
-                  <label class="block text-sm font-medium text-gray-700">3. 選擇或建立成績項目</label>
-                   <select v-model="selectedGradeItemId" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                      <option :value="null" disabled>-- 請選擇 --</option>
-                      <option value="new">建立新成績項目...</option>
-                      <option v-for="item in filteredGradeItems" :key="item.id" :value="item.id">{{ item.name }}</option>
-                  </select>
-              </div>
-         </div>
-         
-         <!-- 建立新成績項目 -->
-         <div v-if="isCreatingNewItem" class="flex items-end gap-2 mb-6 p-4 border rounded-lg bg-yellow-50">
-              <div class="flex-grow">
-                  <label class="block text-sm font-medium text-gray-700">新項目名稱</label>
-                  <input type="text" v-model="newGradeItemName" placeholder="例如: 第一次月考"
-                      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-              </div>
-              <button @click="createGradeItem" :disabled="!newGradeItemName" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400">建立</button>
-         </div>
-  
-         <!-- 成績輸入表格 -->
-         <div v-if="selectedGradeItem" class="bg-white p-6 rounded-lg shadow-md">
-              <div class="flex justify-between items-center mb-4">
-                  <h2 class="text-xl font-semibold">{{ selectedGradeItem.subject_name }} - {{ selectedGradeItem.name }} ({{ selectedGradeItem.category }})</h2>
-                  <button @click="deleteGradeItem(selectedGradeItem.id)" class="text-red-500 hover:text-red-700 text-sm">刪除此項目</button>
-              </div>
+                </div>
+                <div>
+                    <label class="block text-base font-medium text-slate-700">2. 選擇成績項目</label>
+                    <select v-model="selectedGradeItemId" class="mt-1 form-input text-lg py-3">
+                        <option :value="null">-- 請先選擇科目 --</option>
+                        <option v-for="item in filteredGradeItems" :key="item.id" :value="item.id">{{ item.name }}</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div v-if="selectedGradeItem" class="card p-8">
+              <h2 class="text-2xl font-semibold mb-6">{{ selectedGradeItem.subject_name }} - {{ selectedGradeItem.name }} ({{ selectedGradeItem.category }})</h2>
                <div class="overflow-x-auto">
                   <table class="min-w-full divide-y divide-gray-200">
-                      <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left">座號</th><th class="px-6 py-3 text-left">姓名</th><th class="px-6 py-3 text-left">分數</th></tr></thead>
+                      <thead class="bg-slate-50"><tr><th class="table-header">座號</th><th class="table-header">姓名</th><th class="table-header">分數</th></tr></thead>
                       <tbody class="bg-white divide-y divide-gray-200">
-                          <tr v-for="student in grades" :key="student.id">
-                              <td class="px-6 py-4">{{ student.seat_number }}</td>
-                              <td class="px-6 py-4">{{ student.name }}</td>
-                              <td class="px-6 py-4">
+                          <tr v-for="student in grades" :key="student.id" class="hover:bg-slate-50">
+                              <td class="table-cell">{{ student.seat_number }}</td>
+                              <td class="table-cell font-medium">{{ student.name }}</td>
+                              <td class="table-cell">
                                   <input type="number" v-model="student.score" @input="updateGrade(student.student_id, $event.target.value)"
-                                      class="w-24 border-gray-300 bg-blue-50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                      class="form-input w-32 text-lg py-2 text-center">
                               </td>
                           </tr>
                       </tbody>
                   </table>
               </div>
-         </div>
+            </div>
+        </div>
+
+        <!-- Mode: Manage Grade Items -->
+        <div v-if="gradeMode === 'manage'">
+            <div class="card p-8 max-w-3xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div>
+                        <label class="block text-base font-medium text-slate-700">1. 選擇科目</label>
+                        <select v-model="filter.subject_id" class="mt-1 form-input text-lg py-3">
+                           <option v-for="subject in subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end gap-4">
+                        <div class="flex-grow">
+                            <label class="block text-base font-medium text-slate-700">2. 新增項目名稱</label>
+                            <input type="text" v-model="newGradeItemName" placeholder="例如: 第一次月考" class="mt-1 form-input text-lg py-3">
+                        </div>
+                        <button @click="createGradeItem" :disabled="!newGradeItemName || !filter.subject_id" class="btn btn-primary h-14 text-base px-6">建立</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-semibold mb-4">現有項目</h3>
+                <ul class="space-y-3">
+                    <li v-for="item in filteredGradeItems" :key="item.id" class="flex justify-between items-center p-3 border rounded-lg bg-slate-50">
+                        <span class="font-medium text-lg">{{ item.name }}</span>
+                        <button @click="deleteGradeItem(item.id)" class="btn btn-danger text-sm">刪除</button>
+                    </li>
+                    <li v-if="!filter.subject_id" class="text-center text-slate-500 py-4">請先選擇科目。</li>
+                    <li v-else-if="filteredGradeItems.length === 0" class="text-center text-slate-500 py-4">此科目尚無成績項目。</li>
+                </ul>
+            </div>
+        </div>
       </div>
   
-      <!-- 課堂表現 -->
-      <div v-if="currentTab === 'performance'" class="bg-white p-6 rounded-lg shadow-md">
-          <h2 class="text-xl font-semibold mb-4">課堂表現總分 (唯讀)</h2>
-          <div class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-gray-200">
-                  <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left">座號</th><th class="px-6 py-3 text-left">姓名</th><th class="px-6 py-3 text-left">總分</th></tr></thead>
-                  <tbody class="bg-white divide-y divide-gray-200">
-                      <tr v-for="student in performanceSummary" :key="student.id">
-                          <td class="px-6 py-4">{{ student.seat_number }}</td>
-                          <td class="px-6 py-4">{{ student.name }}</td>
-                          <td class="px-6 py-4 font-bold" :class="student.total_score > 0 ? 'text-green-600' : student.total_score < 0 ? 'text-red-600' : 'text-gray-700'">{{ student.total_score }}</td>
-                      </tr>
-                  </tbody>
-              </table>
-          </div>
-      </div>
-  
-      <!-- 成績設定 (科目) -->
-      <div v-if="currentTab === 'settings'" class="bg-white p-6 rounded-lg shadow-md">
-          <h2 class="text-xl font-semibold mb-4">科目管理</h2>
-          <div class="flex items-center space-x-2 mb-4">
-              <input type="text" v-model="newSubjectName" placeholder="新增科目名稱..."
-                  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-              <button @click="addSubject" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">新增</button>
-          </div>
-          <ul class="space-y-2">
-              <li v-for="subject in subjects" :key="subject.id" class="flex justify-between items-center p-2 border rounded-md">
-                  <input type="text" v-model="subject.name" @change="updateSubject(subject)" class="border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                  <button @click="deleteSubject(subject.id)" class="text-red-500 hover:text-red-700">刪除</button>
-              </li>
-          </ul>
+      <div v-if="currentTab === 'settings'">
+          <div class="card p-8 max-w-2xl mx-auto">
+            <h2 class="text-2xl font-semibold mb-6">科目管理</h2>
+            <div class="flex items-center space-x-4 mb-6">
+                <input type="text" v-model="newSubjectName" placeholder="新增科目名稱..." class="form-input text-lg flex-grow py-3">
+                <button @click="addSubject" class="btn btn-primary text-base py-3 px-6">新增</button>
+            </div>
+            <ul class="space-y-3">
+                <li v-for="subject in subjects" :key="subject.id" class="flex justify-between items-center p-3 border rounded-lg bg-slate-50">
+                    <input type="text" v-model="subject.name" @change="updateSubject(subject)" class="form-input text-lg font-medium border-0 bg-transparent">
+                    <button @click="deleteSubject(subject.id)" class="btn btn-danger text-sm">刪除</button>
+                </li>
+            </ul>
+        </div>
       </div>
     </div>
-  </template>
-  
-  <script setup>
+</template>
+
+<script setup>
   import { ref, reactive, onMounted, watch, computed } from 'vue';
   import { authFetch } from '@/utils/api';
   import { debounce } from 'lodash';
   
-  const tabs = ref([ { key: 'entry', name: '成績登錄' }, { key: 'performance', name: '課堂表現紀錄' }, { key: 'settings', name: '成績設定' }]);
-  const currentTab = ref('entry');
+  const tabs = ref([ 
+      { key: 'performance', name: '課堂表現統計' }, 
+      { key: 'quiz', name: '平時測驗' }, 
+      { key: 'assessment', name: '定期評量' }, 
+      { key: 'settings', name: '科目設定' }
+  ]);
+  const currentTab = ref('performance');
+  const gradeMode = ref('edit'); // 'edit' or 'manage'
   
-  // 狀態
+  // State
   const subjects = ref([]);
   const gradeItems = ref([]);
   const grades = ref([]);
   const performanceSummary = ref([]);
+  const performanceLoading = ref(false);
   
-  // 篩選與選擇
-  const filter = reactive({ category: '平時測驗', subject_id: null });
+  const performanceDateRange = reactive({ start: '', end: '' });
+
+  const filter = reactive({ subject_id: null });
   const selectedGradeItemId = ref(null);
-  const isCreatingNewItem = ref(false);
   const newGradeItemName = ref('');
   
-  // 計算屬性
-  const filteredGradeItems = computed(() => {
-      if (!filter.subject_id) return [];
-      return gradeItems.value.filter(item => item.category === filter.category && item.subject_id === filter.subject_id);
+  // Computed
+  const currentCategory = computed(() => {
+    if (currentTab.value === 'quiz') return '平時測驗';
+    if (currentTab.value === 'assessment') return '定期評量';
+    return '';
   });
+
+  const filteredGradeItems = computed(() => {
+      if (!filter.subject_id || !currentCategory.value) return [];
+      return gradeItems.value.filter(item => item.category === currentCategory.value && item.subject_id === filter.subject_id);
+  });
+  
   const selectedGradeItem = computed(() => {
-      if (!selectedGradeItemId.value || selectedGradeItemId.value === 'new') return null;
+      if (!selectedGradeItemId.value) return null;
       return gradeItems.value.find(item => item.id === selectedGradeItemId.value);
   });
   
-  
-  // 初始資料載入
-  const fetchData = async () => {
+  // Methods
+  const setDefaultDates = () => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30);
+    performanceDateRange.end = endDate.toISOString().split('T')[0];
+    performanceDateRange.start = startDate.toISOString().split('T')[0];
+  };
+
+  const fetchInitialData = async () => {
       try {
-          const [subjectsRes, gradeItemsRes, performanceRes] = await Promise.all([
+          const [subjectsRes, gradeItemsRes] = await Promise.all([
               authFetch('/api/subjects'),
               authFetch('/api/grade-items'),
-              authFetch('/api/performance-summary')
           ]);
           subjects.value = await subjectsRes.json();
           gradeItems.value = await gradeItemsRes.json();
-          performanceSummary.value = await performanceRes.json();
           if (subjects.value.length > 0 && !filter.subject_id) {
               filter.subject_id = subjects.value[0].id;
           }
-      } catch (error) { console.error("讀取資料失敗:", error); }
+          await fetchPerformanceSummary();
+      } catch (error) { console.error("讀取初始資料失敗:", error); }
   };
+
+  const fetchPerformanceSummary = async () => {
+    performanceLoading.value = true;
+    try {
+        const res = await authFetch(`/api/performance-summary?startDate=${performanceDateRange.start}&endDate=${performanceDateRange.end}`);
+        performanceSummary.value = await res.json();
+    } catch (error) {
+        console.error("讀取表現統計失敗:", error);
+    } finally {
+        performanceLoading.value = false;
+    }
+  };
+
+  onMounted(() => {
+    setDefaultDates();
+    fetchInitialData();
+  });
   
-  onMounted(fetchData);
-  
-  // 科目管理
+  // Subject Management
   const newSubjectName = ref('');
   const addSubject = async () => { if (!newSubjectName.value) return; const res = await authFetch('/api/subjects', { method: 'POST', body: JSON.stringify({ name: newSubjectName.value }) }); subjects.value.push(await res.json()); newSubjectName.value = ''; };
   const updateSubject = async (subject) => { authFetch(`/api/subjects/${subject.id}`, { method: 'PUT', body: JSON.stringify({ name: subject.name }) }); };
-  const deleteSubject = async (id) => { if (!confirm('確定刪除此科目嗎？')) return; await authFetch(`/api/subjects/${id}`, { method: 'DELETE' }); subjects.value = subjects.value.filter(s => s.id !== id); };
+  const deleteSubject = async (id) => { if (!confirm('確定刪除此科目嗎？所有相關的成績項目和分數將會一併刪除！')) return; await authFetch(`/api/subjects/${id}`, { method: 'DELETE' }); subjects.value = subjects.value.filter(s => s.id !== id); gradeItems.value = gradeItems.value.filter(gi => gi.subject_id !== id); };
   
-  // 成績項目管理
+  // Grade Item Management
   const createGradeItem = async () => {
       const payload = {
-          category: filter.category,
+          category: currentCategory.value,
           subject_id: filter.subject_id,
           name: newGradeItemName.value
       };
       const res = await authFetch('/api/grade-items', { method: 'POST', body: JSON.stringify(payload) });
       const createdItem = await res.json();
       gradeItems.value.unshift(createdItem);
-      isCreatingNewItem.value = false;
       newGradeItemName.value = '';
       selectedGradeItemId.value = createdItem.id;
+      gradeMode.value = 'edit'; // Switch back to edit mode
   };
   const deleteGradeItem = async (id) => { if (!confirm('確定刪除此成績項目及其所有分數嗎？')) return; await authFetch(`/api/grade-items/${id}`, { method: 'DELETE' }); gradeItems.value = gradeItems.value.filter(item => item.id !== id); if (selectedGradeItemId.value === id) selectedGradeItemId.value = null; };
   
-  // 分數管理
+  // Grade Entry
   const fetchGradesFor = async (itemId) => {
       const res = await authFetch(`/api/grades/${itemId}`);
       grades.value = await res.json();
@@ -195,23 +256,34 @@
       debouncedSave(student_id, score);
   };
   
-  // 監聽器
+  // Watchers
   watch(selectedGradeItemId, (newId) => {
-      if (newId === 'new') {
-          isCreatingNewItem.value = true;
+      if (newId) {
+        fetchGradesFor(newId);
       } else {
-          isCreatingNewItem.value = false;
-          if (newId) {
-              fetchGradesFor(newId);
-          } else {
-              grades.value = [];
-          }
+        grades.value = [];
       }
   });
   
-  watch([() => filter.category, () => filter.subject_id], () => {
-      selectedGradeItemId.value = null; // 重置選擇
+  watch(currentTab, (newTab) => {
+      selectedGradeItemId.value = null;
+      gradeMode.value = 'edit';
+      if(newTab === 'performance' && performanceSummary.value.length === 0){
+        fetchPerformanceSummary();
+      }
   });
-  </script>
-  
-  
+
+   watch(filter, () => {
+      selectedGradeItemId.value = null;
+  });
+</script>
+
+<style scoped>
+.table-header {
+    @apply px-6 py-3 text-left text-sm font-medium text-slate-500 uppercase tracking-wider;
+}
+.table-cell {
+    @apply px-6 py-4 whitespace-nowrap text-lg text-slate-700;
+}
+</style>
+

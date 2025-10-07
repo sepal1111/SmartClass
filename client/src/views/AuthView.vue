@@ -1,86 +1,86 @@
 <!-- File Path: /client/src/views/AuthView.vue -->
 <template>
-  <div class="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+  <div class="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-md">
-      <h2 class="mt-6 text-center text-3xl font-extrabold text-sky-600">
+      <h2 class="mt-6 text-center text-4xl font-extrabold text-sky-600">
         智慧班級
       </h2>
-      <p class="mt-2 text-center text-sm text-gray-500">一個為課堂而生的互動平台</p>
+      <p class="mt-2 text-center text-lg text-slate-500">一個為課堂而生的互動平台</p>
     </div>
 
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-      <div class="bg-white py-8 px-4 shadow-xl rounded-2xl sm:px-10">
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-lg">
+      <div class="bg-white py-8 px-4 shadow-2xl rounded-2xl sm:px-10">
         
         <div v-if="!needsSetup" class="mb-6">
-            <div class="flex border-b border-gray-200">
-                <button @click="authMode = 'teacher'" :class="['w-1/2 py-4 text-center font-medium text-sm', authMode === 'teacher' ? 'border-b-2 border-sky-500 text-sky-600' : 'text-gray-500 hover:text-gray-700']">
+            <div class="flex border-b border-slate-200">
+                <button @click="authMode = 'teacher'" :class="['w-1/2 py-4 text-center font-semibold text-lg transition-colors duration-200', authMode === 'teacher' ? 'border-b-4 border-sky-500 text-sky-600' : 'text-slate-500 hover:text-slate-800']">
                     教師登入
                 </button>
-                <button @click="authMode = 'student'" :class="['w-1/2 py-4 text-center font-medium text-sm', authMode === 'student' ? 'border-b-2 border-sky-500 text-sky-600' : 'text-gray-500 hover:text-gray-700']">
+                <button @click="authMode = 'student'" :class="['w-1/2 py-4 text-center font-semibold text-lg transition-colors duration-200', authMode === 'student' ? 'border-b-4 border-sky-500 text-sky-600' : 'text-slate-500 hover:text-slate-800']">
                     學生登入
                 </button>
             </div>
         </div>
 
         <form v-if="needsSetup && authMode === 'teacher'" class="space-y-6" @submit.prevent="handleRegister">
-          <h3 class="text-lg font-medium text-center text-gray-800">建立您的教師帳號</h3>
-          <p class="text-center text-sm text-gray-600">這是您第一次啟動，請設定第一位管理者帳號。</p>
+          <h3 class="text-xl font-medium text-center text-slate-800">建立您的教師帳號</h3>
+          <p class="text-center text-base text-slate-600">這是您第一次啟動，請設定第一位管理者帳號。</p>
            <div>
-            <label for="name" class="block text-sm font-medium text-gray-700">姓名</label>
-            <input v-model="form.name" id="name" type="text" required placeholder="請輸入您的姓名" class="form-input mt-1">
+            <label for="name" class="block text-base font-medium text-slate-700">姓名</label>
+            <input v-model="form.name" id="name" type="text" required placeholder="請輸入您的姓名" class="form-input mt-1 text-lg py-3">
           </div>
           <div>
-            <label for="username" class="block text-sm font-medium text-gray-700">帳號</label>
-            <input v-model="form.username" id="username" type="text" required placeholder="設定您的登入帳號" class="form-input mt-1">
+            <label for="username" class="block text-base font-medium text-slate-700">帳號</label>
+            <input v-model="form.username" id="username" type="text" required placeholder="設定您的登入帳號" class="form-input mt-1 text-lg py-3">
           </div>
           <div>
-            <label for="password" class="block text-sm font-medium text-gray-700">密碼</label>
-            <input v-model="form.password" id="password" type="password" required placeholder="至少 6 個字元" class="form-input mt-1">
+            <label for="password" class="block text-base font-medium text-slate-700">密碼</label>
+            <input v-model="form.password" id="password" type="password" required placeholder="至少 6 個字元" class="form-input mt-1 text-lg py-3">
           </div>
           <div>
-            <label for="passwordConfirm" class="block text-sm font-medium text-gray-700">確認密碼</label>
-            <input v-model="form.passwordConfirm" id="passwordConfirm" type="password" required placeholder="再次輸入您的密碼" class="form-input mt-1">
+            <label for="passwordConfirm" class="block text-base font-medium text-slate-700">確認密碼</label>
+            <input v-model="form.passwordConfirm" id="passwordConfirm" type="password" required placeholder="再次輸入您的密碼" class="form-input mt-1 text-lg py-3">
           </div>
-          <div v-if="error" class="text-red-500 text-sm">{{ error }}</div>
+          <div v-if="error" class="text-red-500 text-base text-center font-semibold">{{ error }}</div>
           <div>
-            <button type="submit" class="w-full btn btn-success">建立帳號</button>
+            <button type="submit" class="w-full btn btn-success text-xl py-4">建立帳號</button>
           </div>
         </form>
 
         <form v-else class="space-y-6" @submit.prevent="handleLogin">
           <div v-if="authMode === 'teacher'">
               <div>
-                <label for="login-username" class="block text-sm font-medium text-gray-700">教師帳號</label>
-                <input v-model="form.username" id="login-username" type="text" required class="form-input mt-1">
+                <label for="login-username" class="block text-base font-medium text-slate-700">教師帳號</label>
+                <input v-model="form.username" id="login-username" type="text" required class="form-input mt-1 text-lg py-3">
               </div>
               <div class="mt-4">
-                <label for="login-password" class="block text-sm font-medium text-gray-700">密碼</label>
-                <input v-model="form.password" id="login-password" type="password" required class="form-input mt-1">
+                <label for="login-password" class="block text-base font-medium text-slate-700">密碼</label>
+                <input v-model="form.password" id="login-password" type="password" required class="form-input mt-1 text-lg py-3">
               </div>
           </div>
           <div v-if="authMode === 'student'">
               <div>
-                <label for="student-account" class="block text-sm font-medium text-gray-700">學生帳號</label>
-                <input v-model="form.account" id="student-account" type="text" required class="form-input mt-1">
+                <label for="student-account" class="block text-base font-medium text-slate-700">學生帳號</label>
+                <input v-model="form.account" id="student-account" type="text" required class="form-input mt-1 text-lg py-3">
               </div>
               <div class="mt-4">
-                <label for="student-password" class="block text-sm font-medium text-gray-700">密碼</label>
-                <input v-model="form.password" id="student-password" type="password" required class="form-input mt-1">
+                <label for="student-password" class="block text-base font-medium text-slate-700">密碼</label>
+                <input v-model="form.password" id="student-password" type="password" required class="form-input mt-1 text-lg py-3">
               </div>
           </div>
-          <div v-if="error" class="text-red-500 text-sm">{{ error }}</div>
+          <div v-if="error" class="text-red-500 text-base text-center font-semibold">{{ error }}</div>
           <div>
-            <button type="submit" class="w-full btn btn-primary">登入</button>
+            <button type="submit" class="w-full btn btn-primary text-xl py-4">登入</button>
           </div>
         </form>
 
         <div v-if="!needsSetup" class="mt-6">
           <div class="relative">
-            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div>
-            <div class="relative flex justify-center text-sm"><span class="px-2 bg-white text-gray-500">或者</span></div>
+            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-300"></div></div>
+            <div class="relative flex justify-center text-sm"><span class="px-2 bg-white text-slate-500 text-base">或者</span></div>
           </div>
           <div class="mt-6">
-            <button @click="goToPingPong" class="w-full btn bg-teal-500 hover:bg-teal-600">加入 PingPong 活動</button>
+            <button @click="goToPingPong" class="w-full btn bg-teal-500 hover:bg-teal-600 text-xl py-4">加入 PingPong 活動</button>
           </div>
         </div>
 
@@ -155,4 +155,3 @@ const handleLogin = async () => {
 
 const goToPingPong = () => router.push({ name: 'pingpong-student' });
 </script>
-
