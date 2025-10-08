@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧班級管理平台 - 操作手冊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f0f4f8; /* 淡雅背景色 */
+        }
+        .presentation-container {
+            width: 100%;
+            max-width: 1000px;
+            height: 600px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 3rem 4rem;
+            opacity: 0;
+            transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+            transform: translateX(100%);
+            background-color: #ffffff;
+            overflow-y: auto;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            z-index: 10;
+        }
+        .slide.prev {
+            transform: translateX(-100%);
+        }
+        .nav-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 20;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-button:hover {
+            background-color: white;
+            transform: translateY(-50%) scale(1.1);
+        }
+        .nav-dots {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            gap: 12px;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .dot.active {
+            background-color: #3b82f6; /* 主題藍色 */
+        }
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .presentation-container {
+                height: 80vh;
+            }
+            .slide {
+                padding: 2rem;
+            }
+            h1 {
+                font-size: 1.875rem; /* 3xl */
+            }
+            h2 {
+                font-size: 1.5rem; /* 2xl */
+            }
+        }
+        /* 自定義程式碼區塊樣式 */
+        .code-block {
+            background-color: #2d3748; /* 深灰藍 */
+            color: #e2e8f0; /* 淺灰 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            white-space: pre;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        .code-block .comment {
+            color: #9f7aea; /* 紫色註解 */
+        }
+        .code-block .keyword {
+            color: #63b3ed; /* 藍色關鍵字 */
+        }
+        .icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="presentation-container">
+        <!-- Slide 1: 歡迎頁面 -->
+        <div id="slide-1" class="slide active flex flex-col items-center justify-center text-center bg-gradient-to-br from-sky-100 to-blue-200">
+            <div class="space-y-4">
+                <svg class="w-20 h-20 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v11.494m-5.22-8.425l-1.313 5.424a2 2 0 001.94 2.457h1.408a2 2 0 001.94-2.457l-1.313-5.424m11.22 0l-1.313 5.424a2 2 0 01-1.94 2.457h-1.408a2 2 0 01-1.94-2.457l1.313-5.424M4.88 8.125a2 2 0 011.94-2.457h10.36a2 2 0 011.94 2.457L18.62 12.5h-13.24l-1.5-4.375z"></path></svg>
+                <h1 class="text-5xl font-bold text-slate-800">智慧班級管理平台</h1>
+                <p class="text-2xl text-slate-600">網頁版操作手冊</p>
+                <p class="mt-8 text-slate-500">點擊右方箭頭開始瀏覽</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: 程式啟動與資料管理 -->
+        <div id="slide-2" class="slide">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6">🚀 程式啟動與資料管理</h2>
+            <h3 class="text-xl font-semibold text-blue-600 mb-4">Release 資料夾結構</h3>
+            <div class="code-block">
+release/
+│
+├── <span class="keyword">啟動智慧班級.bat</span>    <span class="comment"><-- ✅ 點我啟動</span>
+│
+├── bin/                <span class="comment"><-- 核心程式區 (不需理會)</span>
+├── <span class="keyword">data/</span>               <span class="comment"><-- 核心資料庫 (非常重要！)</span>
+├── <span class="keyword">photos/</span>             <span class="comment"><-- 學生照片</span>
+└── <span class="keyword">uploads/</span>            <span class="comment"><-- 學生繳交的作業</span>
+            </div>
+            <div class="mt-6 text-slate-600 text-lg">
+                <p>👉 只需雙擊 <strong class="text-blue-600">啟動智慧班級.bat</strong> 即可啟動服務。</p>
+                <p class="mt-2">⚠️ 程式運行期間，請<strong class="text-orange-500">勿</strong>關閉黑色命令視窗。</p>
+            </div>
+        </div>
+        
+        <!-- Slide 3: 備份與還原 -->
+        <div id="slide-3" class="slide">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6">🔄 如何備份與還原？</h2>
+            <div class="grid md:grid-cols-2 gap-8 h-full items-center">
+                <div class="bg-sky-50 p-6 rounded-lg border-l-4 border-sky-500">
+                    <h3 class="text-2xl font-semibold text-sky-700 mb-3">備份資料</h3>
+                    <p class="text-slate-600 text-lg">
+                        將 <code class="bg-slate-200 px-2 py-1 rounded">data</code>, <code class="bg-slate-200 px-2 py-1 rounded">photos</code>, <code class="bg-slate-200 px-2 py-1 rounded">uploads</code> 這三個資料夾完整複製到一個安全的地方 (例如：隨身碟、雲端硬碟)。
+                    </p>
+                </div>
+                <div class="bg-emerald-50 p-6 rounded-lg border-l-4 border-emerald-500">
+                    <h3 class="text-2xl font-semibold text-emerald-700 mb-3">還原資料</h3>
+                     <p class="text-slate-600 text-lg">
+                        將您備份好的三個資料夾，直接複製回 <code class="bg-slate-200 px-2 py-1 rounded">release</code> 資料夾中，覆蓋掉原有的檔案即可。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 網站功能操作說明 (目錄) -->
+        <div id="slide-4" class="slide">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6">💻 網站功能操作說明</h2>
+            <div class="space-y-4 text-lg text-slate-700">
+                 <p class="flex items-center"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg><strong class="text-blue-600 mr-2">系統主畫面:</strong> 登入後的主介面，包含導覽列與內容區。</p>
+                <p class="flex items-center"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg><strong class="text-blue-600 mr-2">學生管理:</strong> 手動或批次匯入學生資料，並上傳照片。</p>
+                 <p class="flex items-center"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><strong class="text-blue-600 mr-2">課堂儀表板:</strong> 隨機抽籤、表現加分、登記出缺席的核心功能區。</p>
+                 <p class="flex items-center"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M9 9h6v6H9z"></path></svg><strong class="text-blue-600 mr-2">座位表設定:</strong> 拖拉學生、調整版面，打造您的專屬座位表。</p>
+                 <p class="flex items-center"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg><strong class="text-blue-600 mr-2">成績管理:</strong> 記錄課堂表現與各項評量分數。</p>
+                 <p class="flex items-center"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg><strong class="text-blue-600 mr-2">作業管理:</strong> 建立數位作業，查看學生繳交狀況。</p>
+                 <p class="flex items-center"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg><strong class="text-blue-600 mr-2">PingPong 即時問答:</strong> 快速匿名的課堂即時反饋工具。</p>
+                 <p class="flex items-center"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-12v4m-2-2h4m5 4v4m-2-2h4M17 3l-4.5 4.5M17 17l-4.5-4.5M3 17l4.5-4.5M7.5 3l4.5 4.5"></path></svg><strong class="text-blue-600 mr-2">QuizRace 搶答競賽:</strong> 將課堂測驗變成一場刺激的遊戲！</p>
+            </div>
+        </div>
+
+        <!-- Slide 5: 學生管理 -->
+        <div id="slide-5" class="slide">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6">🧑‍🎓 學生管理</h2>
+            <div class="grid md:grid-cols-2 gap-8 items-start">
+                <div>
+                    <h3 class="font-semibold text-xl text-blue-600 mb-2">手動新增/編輯</h3>
+                    <p class="text-slate-600">點擊按鈕，即可在彈出視窗中輸入或修改學生的學號、姓名、帳號、密碼等資料。</p>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-xl text-blue-600 mb-2">批次匯入學生</h3>
+                    <p class="text-slate-600">從 Excel (.xlsx) 或 CSV (.csv) 檔案匯入。欄位需包含：<code class="text-sm bg-slate-200 p-1 rounded">學號, 姓名, 班級, 座號</code>等。</p>
+                </div>
+                <div class="md:col-span-2">
+                    <h3 class="font-semibold text-xl text-blue-600 mb-2">批次上傳照片</h3>
+                    <p class="text-slate-600">選擇多張照片檔案。為了讓系統能自動對應，請務必將照片檔名命名為 <code class="text-sm bg-slate-200 p-1 rounded">學號.jpg</code> (例如：109001.jpg)。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 課堂儀表板 -->
+        <div id="slide-6" class="slide">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6">📊 課堂儀表板</h2>
+            <div class="grid md:grid-cols-2 gap-x-8 gap-y-6 text-lg">
+                <p><strong class="text-blue-600">隨機抽籤：</strong>從「出席」學生中隨機抽取一位。</p>
+                <p><strong class="text-blue-600">課堂表現加減分：</strong>點擊學生座位即可為他 +1 或 -1 分。</p>
+                <p><strong class="text-blue-600">批次登記出缺席：</strong>快速設定全班的出缺席狀態。</p>
+                <p><strong class="text-blue-600">學期統計：</strong>查看指定區間內全班的出缺席統計與出席率。</p>
+            </div>
+        </div>
+
+        <!-- Slide 7: 座位表設定 -->
+        <div id="slide-7" class="slide">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6">🪑 座位表設定</h2>
+             <div class="space-y-4 text-lg text-slate-700">
+                <p><strong class="text-blue-600">拖曳學生：</strong>從左側學生列表拖曳至右側座位區。</p>
+                <p><strong class="text-blue-600">調整版面：</strong>自由增減座位的行數與列數。</p>
+                <p><strong class="text-blue-600">自動排列：</strong>系統根據座號自動依序排入座位。</p>
+                <p class="text-orange-500 font-semibold">⚠️ 完成編排後，務必點擊「儲存座位表」按鈕。</p>
+            </div>
+        </div>
+        
+        <!-- Slide 8: 成績 & 作業管理 -->
+        <div id="slide-8" class="slide">
+             <h2 class="text-3xl font-bold text-slate-800 mb-6">📝 成績管理 & 📁 作業管理</h2>
+             <div class="grid md:grid-cols-2 gap-8">
+                <div class="space-y-3">
+                    <h3 class="font-semibold text-xl text-blue-600">成績管理</h3>
+                    <p class="text-slate-600">用於記錄學生的各項評量分數。可登錄新成績、總覽與修改，並設定科目。</p>
+                </div>
+                 <div class="space-y-3">
+                    <h3 class="font-semibold text-xl text-blue-600">作業管理</h3>
+                    <p class="text-slate-600">建立數位作業項目，設定截止日期，並可線上查看學生繳交的檔案。</p>
+                </div>
+             </div>
+        </div>
+        
+        <!-- Slide 9: PingPong 即時問答 -->
+        <div id="slide-9" class="slide">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6">🙋 PingPong 即時問答</h2>
+            <p class="text-slate-600 text-lg mb-6">一個快速、匿名的課堂即時反饋工具，適合用於快速提問與收集全班意見。</p>
+            <div class="space-y-3 text-lg">
+                <p><strong class="text-blue-600">匿名參與：</strong>學生只需輸入暱稱即可加入，無需登入。</p>
+                <p><strong class="text-blue-600">多元題型：</strong>支援單選、是非、簡答、繪圖等題型。</p>
+                <p><strong class="text-blue-600">即時結果：</strong>作答結束後，立即以圖表或縮圖牆呈現全班結果。</p>
+            </div>
+        </div>
+
+        <!-- Slide 10: QuizRace 搶答競賽 -->
+        <div id="slide-10" class="slide">
+             <h2 class="text-3xl font-bold text-slate-800 mb-6">🏆 QuizRace 搶答競賽</h2>
+             <div class="space-y-6 text-lg">
+                <div class="step">
+                    <h3 class="font-semibold text-xl text-blue-600">1. 建立題庫</h3>
+                    <p class="text-slate-600 ml-4">進入「搶答競賽」頁面，建立測驗集並管理題目。支援手動新增或從 Excel 批次匯入。</p>
+                </div>
+                <div class="step">
+                    <h3 class="font-semibold text-xl text-blue-600">2. 主持遊戲</h3>
+                    <p class="text-slate-600 ml-4">點擊「開始競賽」，在遊戲大廳等待學生加入。全員到齊後即可開始刺激的問答競賽！</p>
+                </div>
+                <div class="step">
+                    <h3 class="font-semibold text-xl text-blue-600">3. 學生參與</h3>
+                    <p class="text-slate-600 ml-4">學生掃描 QR Code 或輸入房間代碼即可加入，無需登入，準備搶答！</p>
+                </div>
+             </div>
+             <div class="mt-8 bg-amber-50 p-4 rounded-lg border-l-4 border-amber-400">
+                <h4 class="font-bold text-amber-800">Excel 匯入格式提醒</h4>
+                <p class="text-amber-700 mt-1">欄位需依序為：<br><code class="text-sm">題目文字, 正確答案, 選項1, 選項2, 選項3, 選項4</code></p>
+             </div>
+        </div>
+
+        <!-- Slide 11: 結束頁 -->
+        <div id="slide-11" class="slide flex flex-col items-center justify-center text-center bg-gradient-to-br from-emerald-100 to-teal-200">
+            <h2 class="text-4xl font-bold text-slate-800">操作說明結束</h2>
+            <p class="text-xl text-slate-600 mt-4">希望這份手冊能幫助您更快速地熟悉平台操作！</p>
+             <svg class="w-16 h-16 text-emerald-600 mx-auto mt-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.085a2 2 0 00-1.736.97l-2.714 5.428a2 2 0 001.736 2.97h4.615a2 2 0 002-2z"></path></svg>
+        </div>
+
+
+        <!-- 導覽按鈕 -->
+        <div id="prevBtn" class="nav-button left-4">
+            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        </div>
+        <div id="nextBtn" class="nav-button right-4">
+            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </div>
+
+        <!-- 導覽點 -->
+        <div id="navDots" class="nav-dots"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const navDotsContainer = document.getElementById('navDots');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            // 創建導覽點
+            slides.forEach((_, i) => {
+                const dot = document.createElement('div');
+                dot.classList.add('dot');
+                dot.addEventListener('click', () => {
+                    goToSlide(i);
+                });
+                navDotsContainer.appendChild(dot);
+            });
+            const dots = document.querySelectorAll('.dot');
+
+            function updateNav() {
+                // 更新 slide 的 class
+                slides.forEach((slide, index) => {
+                    slide.classList.remove('active', 'prev');
+                    if (index === currentSlide) {
+                        slide.classList.add('active');
+                    } else if (index < currentSlide) {
+                         slide.classList.add('prev');
+                    }
+                });
+
+                // 更新導覽點的狀態
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === currentSlide);
+                });
+
+                // 更新按鈕的可見性
+                prevBtn.style.display = currentSlide === 0 ? 'none' : 'flex';
+                nextBtn.style.display = currentSlide === totalSlides - 1 ? 'none' : 'flex';
+            }
+
+            function goToSlide(slideNumber) {
+                if (slideNumber >= 0 && slideNumber < totalSlides) {
+                    currentSlide = slideNumber;
+                    updateNav();
+                }
+            }
+
+            function nextSlide() {
+                if (currentSlide < totalSlides - 1) {
+                    currentSlide++;
+                    updateNav();
+                }
+            }
+
+            function prevSlide() {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    updateNav();
+                }
+            }
+            
+            // 事件監聽
+            nextBtn.addEventListener('click', nextSlide);
+            prevBtn.addEventListener('click', prevSlide);
+
+            // 鍵盤導覽
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight') {
+                    nextSlide();
+                } else if (e.key === 'ArrowLeft') {
+                    prevSlide();
+                }
+            });
+
+            // 初始化
+            goToSlide(0);
+        });
+    </script>
+</body>
+</html>
+

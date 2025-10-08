@@ -11,6 +11,7 @@ const fs = require('fs');
 const http = require('http');
 const { Server } = require("socket.io");
 const os = require('os');
+const open = require('open'); // 引入 open 套件
 
 const app = express();
 const server = http.createServer(app);
@@ -50,8 +51,8 @@ function getBestIP() {
         }
 
         for (const net of interfaces[name]) {
+            // 優先選擇 Wi-Fi 或乙太網路
             if (net.family === 'IPv4' && !net.internal) {
-                // 優先選擇 Wi-Fi 或乙太網路
                 if (lowerCaseName.includes('wi-fi') || lowerCaseName.includes('wlan') || lowerCaseName.includes('無線') || lowerCaseName.includes('ethernet') || lowerCaseName.includes('乙太')) {
                     preferredCandidate = net.address;
                 }
@@ -909,7 +910,32 @@ if (isPkg) {
 }
 
 server.listen(PORT, HOST, () => {
-    console.log(`後端伺服器正在 http://${HOST}:${PORT} 運行`);
-    console.log(`學生端請連線至此網址，或掃描老師主畫面上的 QR Code`);
+    const serverUrl = `http://${HOST}:${PORT}`;
+    
+    // --- 為主控台訊息加上顏色 ---
+    const colors = {
+      reset: "\x1b[0m",
+      bright: "\x1b[1m",
+      fg: {
+        green: "\x1b[32m",
+        cyan: "\x1b[36m",
+        yellow: "\x1b[33m",
+        red: "\x1b[31m",
+      }
+    };
+
+    console.log(``);
+    console.log(`${colors.bright}${colors.fg.green}後端伺服器正在 ${serverUrl} 運行${colors.reset}`);
+    console.log(``);    
+    console.log(`${colors.fg.yellow}學生端請連線至此網址，或掃描老師主畫面上的 QR Code${colors.reset}`);
+    console.log(``);
+    console.log(`${colors.fg.yellow}這個視窗是顯示伺服器運行的狀態，請勿關閉${colors.reset}`);
+    console.log(``);
+    console.log(`${colors.fg.red}課程結束後，關閉這個視窗即可停止伺服器運作${colors.reset}`);
+    console.log(``); 
+    // 只有在封裝後的執行檔環境才自動開啟瀏覽器
+    if (isPkg) {
+        open(`http://${HOST}:${PORT}`);
+    }
 });
 
