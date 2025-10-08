@@ -1,13 +1,14 @@
 <!-- File Path: /client/src/views/ClassroomDashboardView.vue -->
 <template>
   <div>
-    <div class="flex justify-between items-center mb-8">
-      <h1 class="text-4xl font-bold text-slate-800">班級儀表板</h1>
-      <div class="flex space-x-4">
-          <button @click="openAttendanceModal" class="btn btn-secondary px-4 py-2">批次登記</button>
-          <button @click="openAttendanceSummaryModal" class="btn bg-slate-600 hover:bg-slate-700 px-4 py-2">學期統計</button>
-      </div>
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+        <h1 class="text-4xl font-bold text-slate-800">班級儀表板</h1>
+        <div class="flex space-x-2 mt-4 md:mt-0">
+            <button @click="openAttendanceModal" class="btn btn-secondary px-4 py-2 text-base">批次登記</button>
+            <button @click="openAttendanceSummaryModal" class="btn bg-slate-600 hover:bg-slate-700 px-4 py-2 text-base">學期統計</button>
+        </div>
     </div>
+
 
     <!-- 頂部資訊卡 -->
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
@@ -60,12 +61,12 @@
         <div v-if="isLoading" class="text-center py-16">座位表讀取中...</div>
         <div v-else :style="gridStyle" class="grid gap-3">
             <div v-for="i in (seatingChart.rows * seatingChart.cols)" :key="i"
-                 class="h-36 rounded-xl flex flex-col justify-center items-center text-center p-2 transition-all duration-300 relative border-2"
+                 class="h-40 rounded-xl flex flex-col justify-center items-center text-center p-2 transition-all duration-300 relative border-2"
                  :class="getSeatClasses(seatingChart.seats[i-1])">
                 
                 <div v-if="seatingChart.seats[i-1]" 
                      @click="handleSeatClick(seatingChart.seats[i-1])" 
-                     class="w-full h-full flex flex-col justify-between p-2"
+                     class="w-full h-full flex flex-col justify-center items-center"
                      :class="(attendance[seatingChart.seats[i-1].student_id] || 'present') === 'present' ? 'cursor-pointer' : 'cursor-not-allowed'">
                     
                     <!-- Performance Badge -->
@@ -80,9 +81,10 @@
                         <svg v-if="getAttendanceStatus(seatingChart.seats[i-1].student_id) === 'absent'" class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
                     </div>
 
-                    <div class="flex-grow flex flex-col items-center justify-center pt-4">
-                      <p class="font-bold text-xl leading-tight">{{ seatingChart.seats[i-1].name }}</p>
-                      <p class="text-sm text-slate-600 mt-1">({{ seatingChart.seats[i-1].seat_number }})</p>
+                    <div class="flex-grow flex flex-col items-center justify-center">
+                        <img :src="getPhotoUrl(seatingChart.seats[i-1])" @error="onImageError" class="w-20 h-20 object-cover rounded-full bg-gray-200 border-2 border-white shadow-sm">
+                        <p class="font-bold text-xl leading-tight mt-2">{{ seatingChart.seats[i-1].name }}</p>
+                        <p class="text-sm text-slate-600">({{ seatingChart.seats[i-1].seat_number }})</p>
                     </div>
                 </div>
                  <div v-else class="text-slate-400 text-sm">(空位)</div>
@@ -244,6 +246,7 @@ const attendance = ref({});
 const performance = ref({});
 const isLoading = ref(true);
 const error = ref('');
+const studentPhotos = ref(new Set());
 
 const isScoreModalOpen = ref(false);
 const isAttendanceModalOpen = ref(false);
@@ -253,6 +256,8 @@ const tempAttendance = ref({});
 
 const isPicking = ref(false);
 const randomlyPickedStudent = ref(null);
+
+const defaultAvatar = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NkY2RjZCI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgM2MxLjY2IDAgMyAxLjM0IDMgM3MtMS4zNCAzLTMgMy0zLTEuMzQtMy0zIDEuMzQtMyAzLTMzem0wIDE0LjJjLTIuNSAwLTQuNzEtMS4yOC02LTMuMjIuMDMtMS45OSA0LTMuMDggNi0zLjA4czUuOTcgMS4wOSA2IDMuMDhjLTEuMjkgMS45NC0zLjUgMy4yMi02IDMuMjJ6Ii8+PC9zdmc+";
 
 const attendanceTypes = {
   present: { label: '出席', color: 'green', bgColor: 'bg-green-500', hoverBg: 'hover:bg-green-200' },
@@ -319,6 +324,20 @@ const studentScoreColor = computed(() => {
 
 // --- Methods ---
 
+const getPhotoUrl = (student) => {
+    if (!student?.student_id) return defaultAvatar;
+    for (const ext of ['.jpg', '.jpeg', '.png']) {
+        if (studentPhotos.value.has(student.student_id + ext)) {
+            return `/photos/${student.student_id}${ext}?t=${new Date().getTime()}`;
+        }
+    }
+    return defaultAvatar;
+};
+
+const onImageError = (event) => {
+    event.target.src = defaultAvatar;
+};
+
 const getAttendanceStatus = (studentId) => {
     return attendance.value[studentId] || 'present';
 };
@@ -359,16 +378,19 @@ const fetchDashboardData = async () => {
     isLoading.value = true;
     error.value = '';
     try {
-        const [statusRes, studentsRes] = await Promise.all([
+        const [statusRes, studentsRes, photosRes] = await Promise.all([
           authFetch(`/api/classroom-status?date=${today_YYYYMMDD.value}`),
-          authFetch('/api/students')
+          authFetch('/api/students'),
+          authFetch('/api/students/photos')
         ]);
 
         if (!statusRes.ok) throw new Error('無法讀取課堂儀表板資料');
         if (!studentsRes.ok) throw new Error('無法讀取學生列表');
+        if (!photosRes.ok) throw new Error('無法讀取學生照片列表');
         
         const statusData = await statusRes.json();
         students.value = await studentsRes.json();
+        studentPhotos.value = new Set(await photosRes.json());
 
         seatingChart.value = statusData.seatingChart || { rows: 6, cols: 5, seats: {} };
         performance.value = statusData.performance || {};
@@ -533,3 +555,4 @@ const calculateAttendanceRate = (record) => {
 
 onMounted(fetchDashboardData);
 </script>
+
