@@ -84,13 +84,14 @@ function getBestIP() {
 
 const PORT = 3000;
 // 在 pkg 封裝環境中，使用自動偵測的 IP；在開發環境中，使用 127.0.0.1 以配合 Vite 代理
-const HOST = isPkg ? getBestIP() : '127.0.0.1';
+const HOST = isPkg ? getBestIP() : '127.0.0.1'; // HOST 的定義可以保留，但在 listen 時不使用
 
+// 當只傳入 PORT 和 callback 時，Node.js 會自動監聽所有可用的 IP 位址 (包含 IPv4 的 127.0.0.1 和 IPv6 的 ::1)
+server.listen(PORT, () => {
+    const serverUrlForLog = `http://localhost:${PORT}`; // 為了日誌清晰，可以改用 localhost
+    const serverUrlForStudent = `http://${getBestIP()}:${PORT}`; // 學生連線依然用偵測到的IP
 
-server.listen(PORT, HOST, () => {
-    const serverUrl = `http://${HOST}:${PORT}`;
-    
-    // --- 為主控台訊息加上顏色 ---
+    // ... (為美觀，可以一併修改主控台的輸出訊息)
     const colors = {
       reset: "\x1b[0m",
       bright: "\x1b[1m",
@@ -103,18 +104,16 @@ server.listen(PORT, HOST, () => {
     };
 
     console.log(``);
-    console.log(`${colors.bright}${colors.fg.green}後端伺服器正在 ${serverUrl} 運行${colors.reset}`);
-    console.log(`${colors.fg.cyan}學生端請連線至此網址，或掃描老師主畫面上的 QR Code${colors.reset}`);
+    console.log(`${colors.bright}${colors.fg.green}後端伺服器正在 ${serverUrlForLog} 運行${colors.reset}`);
+    console.log(`${colors.fg.cyan}學生端請連線至: ${serverUrlForStudent} (或掃描QR Code)${colors.reset}`);
     console.log(``);
-    console.log(`${colors.fg.yellow}这个视窗是显示伺服器运行的状态，请勿关闭${colors.reset}`);
+    console.log(`${colors.fg.yellow}這是視窗是顯示網站的啟動狀態，請勿關閉！${colors.reset}`);
     console.log(``);
-    console.log(`${colors.fg.red}课程结束后，关闭这个视窗即可停止伺服器运作${colors.reset}`);
+    console.log(`${colors.fg.red}課程結束後，請再將此視窗關閉，網站即會停止。${colors.reset}`);
     console.log(``);
-
-    // --- 新增：啟動後自動開啟瀏覽器 ---
-    // 在開發模式下不自動開啟，因為開發者通常會手動開啟 Vite 的頁面
+    
     if (isPkg) {
-      open(serverUrl);
+      open(`http://${HOST}:${PORT}`); // 自動開啟瀏覽器維持原樣
     }
 });
 
