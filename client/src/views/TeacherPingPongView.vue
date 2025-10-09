@@ -1,7 +1,7 @@
 <!-- File Path: /client/src/views/TeacherPingPongView.vue -->
 <template>
     <div>
-        <h1 class="text-4xl font-bold text-slate-800 mb-8">及時互動問答</h1>
+        <h1 class="text-4xl font-bold text-slate-800 mb-8">PingPong 即時問答</h1>
 
         <!-- 狀態一：尚未建立活動 -->
         <div v-if="!roomCode" class="text-center p-10 card max-w-2xl mx-auto">

@@ -16,20 +16,13 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // 原有的 API 代理規則
+      // 將所有 /api 開頭的請求代理到後端伺-服器
       '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      // 照片路徑的代理規則
-      '/photos': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      // 新增：學生上傳作業的路徑代理規則
-      '/uploads': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
+        target: 'http://127.0.0.1:3000', // 使用 127.0.0.1 避免 IPv6 問題
+        changeOrigin: true, // 允許跨域
+        // 如果您的後端 API 路徑本身不包含 /api，可以使用 rewrite
+        // 例如：前端請求 /api/users，實際代理到 http://127.0.0.1:3000/users
+        // rewrite: (path) => path.replace(/^\/api/, '') 
       }
     }
   }
