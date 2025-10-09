@@ -23,6 +23,14 @@ export default defineConfig({
         // 如果您的後端 API 路徑本身不包含 /api，可以使用 rewrite
         // 例如：前端請求 /api/users，實際代理到 http://127.0.0.1:3000/users
         // rewrite: (path) => path.replace(/^\/api/, '') 
+      },
+      '/photos': {
+        target: 'http://127.0.0.1:3000', // 後端伺服器位址
+        changeOrigin: true,              // 允許跨域
+      },
+      '/uploads': {
+        target: 'http://127.0.0.1:3000', // 後端伺服器位址
+        changeOrigin: true,              // 允許跨域
       }
     }
   }

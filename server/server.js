@@ -280,15 +280,15 @@ app.get('/api/student/assignments', authenticateToken, (req, res) => {
             SELECT a.*, s.name as subject_name 
             FROM assignments a 
             LEFT JOIN subjects s ON a.subject_id = s.id 
-            WHERE a.due_date IS NOT NULL AND a.due_date > datetime('now', 'localtime')
-            ORDER BY a.due_date ASC
+            ORDER BY a.created_at DESC
         `).all();
         
         const assignmentsWithStatus = assignments.map(assignment => {
             const assignmentDir = path.join(uploadsDirectory, assignment.title.replace(/[\/\\?%*:|"<>]/g, '-'));
             const studentDir = path.join(assignmentDir, `${String(student.seat_number).padStart(2, '0')}_${student.name}`);
             const hasSubmitted = fs.existsSync(studentDir) && fs.readdirSync(studentDir).length > 0;
-            return { ...assignment, hasSubmitted };
+            const isLate = hasSubmitted && fs.existsSync(path.join(studentDir, '_LATE.txt'));
+            return { ...assignment, hasSubmitted, isLate };
         });
 
         res.json(assignmentsWithStatus);
@@ -302,11 +302,15 @@ app.post('/api/student/upload/:assignmentId', authenticateToken, studentWorkUplo
     if (req.user.type !== 'student') return res.status(403).json({ error: '僅學生可訪問' });
     
     const { assignmentId } = req.params;
-    const assignment = db.prepare('SELECT allow_resubmission FROM assignments WHERE id = ?').get(assignmentId);
+    const assignment = db.prepare('SELECT title, due_date, allow_resubmission FROM assignments WHERE id = ?').get(assignmentId);
     
-    if (assignment.allow_resubmission === 0) {
-        // This check is now mostly server-side validation as the client-side should prevent this.
-        // It's good practice to keep it.
+    if (assignment && assignment.due_date && new Date() > new Date(assignment.due_date)) {
+        const studentInfo = db.prepare('SELECT name, seat_number FROM students WHERE id = ?').get(req.user.id);
+        const assignmentDir = path.join(uploadsDirectory, assignment.title.replace(/[\/\\?%*:|"<>]/g, '-'));
+        const studentDir = path.join(assignmentDir, `${String(studentInfo.seat_number).padStart(2, '0')}_${studentInfo.name}`);
+        if (fs.existsSync(studentDir)) {
+            fs.writeFileSync(path.join(studentDir, '_LATE.txt'), new Date().toISOString());
+        }
     }
     
     if (!req.files || req.files.length === 0) return res.status(400).json({ error: '沒有上傳檔案。' });
@@ -315,7 +319,6 @@ app.post('/api/student/upload/:assignmentId', authenticateToken, studentWorkUplo
 
 
 app.post('/api/student/change-password', authenticateToken, jsonParser, (req, res) => { if (req.user.type !== 'student') return res.status(403).json({ error: '僅學生可操作。' }); const { currentPassword, newPassword } = req.body; if (!currentPassword || !newPassword || newPassword.length < 6) return res.status(400).json({ error: '密碼格式不符，新密碼長度至少需要 6 個字元。' }); const student = db.prepare('SELECT * FROM students WHERE id = ?').get(req.user.id); if (!student || !bcrypt.compareSync(currentPassword, student.password)) return res.status(401).json({ error: '目前的密碼不正確。' }); try { const newHashedPassword = bcrypt.hashSync(newPassword, 10); db.prepare('UPDATE students SET password = ? WHERE id = ?').run(newHashedPassword, req.user.id); res.json({ message: '密碼已成功更新！' }); } catch (err) { res.status(500).json({ error: '資料庫錯誤，更新密碼失敗。' }); } });
-// --- 成績管理 API ---
 app.get('/api/subjects', authenticateToken, (req, res) => { res.json(db.prepare('SELECT * FROM subjects ORDER BY id ASC').all()); });
 app.post('/api/subjects', authenticateToken, jsonParser, (req, res) => { const { name } = req.body; if (!name) return res.status(400).json({ error: '科目名稱為必填項。' }); try { const info = db.prepare('INSERT INTO subjects (name, teacher_id) VALUES (?, ?)').run(name, req.user.id); res.status(201).json(db.prepare('SELECT * FROM subjects WHERE id = ?').get(info.lastInsertRowid)); } catch (err) { if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') return res.status(409).json({ error: '科目名稱已存在。' }); res.status(500).json({ error: '資料庫錯誤。' }); } });
 app.put('/api/subjects/:id', authenticateToken, jsonParser, (req, res) => { const { name } = req.body; if (!name) return res.status(400).json({ error: '科目名稱為必填項。' }); try { const info = db.prepare('UPDATE subjects SET name = ? WHERE id = ?').run(name, req.params.id); if (info.changes === 0) return res.status(404).json({ error: '找不到指定的科目。' }); res.json(db.prepare('SELECT * FROM subjects WHERE id = ?').get(req.params.id)); } catch (err) { if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') return res.status(409).json({ error: '科目名稱已存在。' }); res.status(500).json({ error: '資料庫錯誤。' }); } });
@@ -326,11 +329,10 @@ app.delete('/api/grade-items/:id', authenticateToken, (req, res) => { const info
 app.get('/api/grades/:grade_item_id', authenticateToken, (req, res) => { const { grade_item_id } = req.params; const students = db.prepare('SELECT id, student_id, name, seat_number FROM students ORDER BY seat_number ASC, student_id ASC').all(); const grades = db.prepare('SELECT student_id, score FROM grades WHERE grade_item_id = ?').all(grade_item_id); const gradeMap = new Map(grades.map(g => [g.student_id, g.score])); const result = students.map(s => ({ ...s, score: gradeMap.get(s.student_id) ?? null })); res.json(result); });
 app.post('/api/grades', authenticateToken, jsonParser, (req, res) => { const { grade_item_id, student_id, score } = req.body; if (!grade_item_id || !student_id) return res.status(400).json({ error: '缺少必要參數。' }); const finalScore = score === '' || score === null ? null : Number(score); const stmt = db.prepare(`INSERT INTO grades (grade_item_id, student_id, score) VALUES (?, ?, ?) ON CONFLICT(grade_item_id, student_id) DO UPDATE SET score = excluded.score`); stmt.run(grade_item_id, student_id, finalScore); res.status(200).json({ message: '成績已更新' }); });
 app.get('/api/performance-summary', authenticateToken, (req, res) => { const { startDate, endDate } = req.query; if (!startDate || !endDate) return res.status(400).json({ error: '必須提供開始與結束日期。' }); try { const stmt = db.prepare(` SELECT s.id, s.student_id, s.name, s.seat_number, SUM(COALESCE(p.points, 0)) as total_score FROM students s LEFT JOIN performance p ON s.student_id = p.student_id AND p.date BETWEEN ? AND ? GROUP BY s.id, s.student_id, s.name, s.seat_number ORDER BY s.seat_number ASC, s.student_id ASC `); res.json(stmt.all(startDate, endDate)); } catch (err) { res.status(500).json({ error: '讀取課堂表現統計失敗。' }); } });
-// --- 學期出缺席統計 API ---
 app.get('/api/attendance-summary', authenticateToken, (req, res) => { const { startDate, endDate } = req.query; if (!startDate || !endDate) return res.status(400).json({ error: '必須提供開始與結束日期。' }); try { const stmt = db.prepare(` SELECT s.student_id, s.name, s.seat_number, SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present, SUM(CASE WHEN a.status = 'sick' THEN 1 ELSE 0 END) as sick, SUM(CASE WHEN a.status = 'official' THEN 1 ELSE 0 END) as official, SUM(CASE WHEN a.status = 'personal' THEN 1 ELSE 0 END) as personal, SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as absent FROM students s LEFT JOIN attendance a ON s.student_id = a.student_id AND a.date BETWEEN ? AND ? GROUP BY s.student_id, s.name, s.seat_number ORDER BY s.seat_number ASC, s.student_id ASC `); res.json(stmt.all(startDate, endDate)); } catch (err) { res.status(500).json({ error: '讀取學期出缺席統計失敗。' }); } });
-// --- 其他 API (座位表, 儀表板) ---
 app.get('/api/seating-chart', authenticateToken, (req, res) => { const chart = db.prepare("SELECT * FROM seating_charts WHERE name = 'default'").get(); if (chart) { chart.seats = JSON.parse(chart.seats || '{}'); res.json(chart); } else { res.json({ rows: 6, cols: 5, seats: {} }); } });
 app.post('/api/seating-chart', authenticateToken, jsonParser, (req, res) => { const { rows, cols, seats } = req.body; const stmt = db.prepare(`INSERT INTO seating_charts (name, rows, cols, seats) VALUES ('default', ?, ?, ?) ON CONFLICT(name) DO UPDATE SET rows=excluded.rows, cols=excluded.cols, seats=excluded.seats`); stmt.run(rows, cols, JSON.stringify(seats)); res.json({ message: '座位表已儲存。' }); });
+
 app.get('/api/assignments', authenticateToken, (req, res) => {
     try {
         const stmt = db.prepare(`
@@ -344,6 +346,7 @@ app.get('/api/assignments', authenticateToken, (req, res) => {
         res.status(500).json({ error: '讀取作業列表失敗' });
     }
 });
+
 app.post('/api/assignments', authenticateToken, jsonParser, (req, res) => {
     const { title, description, due_date, subject_id, allow_resubmission } = req.body;
     if (!title || !subject_id) return res.status(400).json({ error: '作業標題和科目為必填項。' });
@@ -406,7 +409,9 @@ app.get('/api/assignments/:id/submissions', authenticateToken, (req, res) => {
         if (!fs.existsSync(assignmentDir)) return res.json([]);
 
         const allStudents = db.prepare('SELECT student_id, name, seat_number FROM students').all();
-        const studentMap = new Map(allStudents.map(s => [s.student_id, { name: s.name, seat_number: s.seat_number }]));
+        
+        // *** 關鍵修正：產生完整的 Base URL ***
+        const baseUrl = `http://${HOST}:${PORT}`;
 
         const studentDirs = fs.readdirSync(assignmentDir, { withFileTypes: true })
             .filter(dirent => dirent.isDirectory())
@@ -415,19 +420,26 @@ app.get('/api/assignments/:id/submissions', authenticateToken, (req, res) => {
         const submissions = studentDirs.map(dirName => {
             const [seat, name] = dirName.split('_');
             const studentDir = path.join(assignmentDir, dirName);
-            const files = fs.readdirSync(studentDir).map(fileName => ({
-                name: fileName,
-                url: `/uploads/${encodeURIComponent(assignment.title.replace(/[\/\\?%*:|"<>]/g, '-'))}/${encodeURIComponent(dirName)}/${encodeURIComponent(fileName)}`
-            }));
+            const filesInDir = fs.readdirSync(studentDir);
             
-            // Find student_id from name and seat
+            const isLate = filesInDir.includes('_LATE.txt');
+            
+            const files = filesInDir
+                .filter(fileName => fileName !== '_LATE.txt')
+                .map(fileName => ({
+                    name: fileName,
+                    // *** 關鍵修正：使用完整的 URL ***
+                    url: `${baseUrl}/uploads/${encodeURIComponent(assignment.title.replace(/[\/\\?%*:|"<>]/g, '-'))}/${encodeURIComponent(dirName)}/${encodeURIComponent(fileName)}`
+                }));
+            
             const student = allStudents.find(s => s.name === name && String(s.seat_number).padStart(2, '0') === seat);
 
             return {
                 studentId: student ? student.student_id : null,
                 name: name,
                 seat_number: seat,
-                files: files
+                files: files,
+                isLate: isLate
             };
         }).filter(s => s.files.length > 0);
 
@@ -970,6 +982,4 @@ server.listen(PORT, '0.0.0.0', () => {
         open(`http://${HOST}:${PORT}`);
     }
 });
-
-
 

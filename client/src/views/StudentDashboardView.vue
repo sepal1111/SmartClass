@@ -25,20 +25,45 @@
                 <span class="px-2 py-1 text-xs font-semibold rounded-full bg-sky-100 text-sky-800">{{ assignment.subject_name }}</span>
                 <h3 class="text-2xl font-bold text-slate-800 mt-2">{{ assignment.title }}</h3>
                 <p class="text-slate-600 mt-2">{{ assignment.description }}</p>
-                <p class="text-sm text-red-600 mt-3 font-medium">繳交截止日期：{{ new Date(assignment.due_date).toLocaleString() }}</p>
+                <p class="text-sm mt-3 font-medium" :class="assignment.due_date ? 'text-red-600' : 'text-green-600'">
+                    <span v-if="assignment.due_date">繳交截止日期：{{ new Date(assignment.due_date).toLocaleString() }}</span>
+                    <span v-else>沒有繳交期限</span>
+                </p>
               </div>
               <div class="w-full md:w-auto md:ml-6">
-                <div v-if="assignment.hasSubmitted && !assignment.allow_resubmission" 
-                     class="w-full text-center py-3 px-6 text-base flex items-center justify-center gap-2 bg-green-100 text-green-700 rounded-md font-bold">
-                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  <span>已繳交</span>
+                <!-- *** 修正：重構繳交狀態的顯示邏輯 *** -->
+                <!-- 狀態1: 已繳交 / 已補交 -->
+                <div v-if="assignment.hasSubmitted">
+                    <!-- 狀態1a: 不允許重交 -> 顯示最終狀態 -->
+                    <div v-if="!assignment.allow_resubmission" 
+                         class="w-full text-center py-3 px-6 text-base flex items-center justify-center gap-2 rounded-md font-bold"
+                         :class="assignment.isLate ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'">
+                        <svg v-if="assignment.isLate" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span>{{ assignment.isLate ? '已補交' : '已繳交' }}</span>
+                    </div>
+                    <!-- 狀態1b: 允許重交 -> 顯示重新上傳按鈕 -->
+                    <div v-else>
+                        <input type="file" @change="handleFileSelect($event, assignment.id)" :id="'file-upload-' + assignment.id" class="hidden" multiple>
+                        <button @click="triggerFileInput(assignment.id)" class="w-full btn btn-primary py-3 px-6 text-base flex items-center justify-center gap-2">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                          <span>重新上傳</span>
+                        </button>
+                    </div>
                 </div>
+                <!-- 狀態2: 尚未繳交 -->
                 <div v-else>
-                  <input type="file" @change="handleFileSelect($event, assignment.id)" :id="'file-upload-' + assignment.id" class="hidden" multiple>
-                  <button @click="triggerFileInput(assignment.id)" class="w-full btn btn-primary py-3 px-6 text-base flex items-center justify-center gap-2">
-                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
-                    <span>{{ assignment.hasSubmitted ? '重新上傳' : '選擇檔案上傳' }}</span>
-                  </button>
+                    <input type="file" @change="handleFileSelect($event, assignment.id)" :id="'file-upload-' + assignment.id" class="hidden" multiple>
+                    <!-- 狀態2a: 已逾期 -> 顯示補交按鈕 -->
+                    <button v-if="isOverdue(assignment)" @click="triggerFileInput(assignment.id)" class="w-full btn btn-danger py-3 px-6 text-base flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        <span>請補交作業</span>
+                    </button>
+                    <!-- 狀態2b: 未逾期 -> 顯示正常上傳按鈕 -->
+                    <button v-else @click="triggerFileInput(assignment.id)" class="w-full btn btn-primary py-3 px-6 text-base flex items-center justify-center gap-2">
+                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                      <span>選擇檔案上傳</span>
+                    </button>
                 </div>
               </div>
             </div>
@@ -218,5 +243,12 @@ const changePassword = async () => {
   } catch (error) { passwordForm.error = error.message; }
 };
 
+// *** 新增：判斷是否逾期的輔助函式 ***
+const isOverdue = (assignment) => {
+  // 只有在 due_date 存在時才判斷
+  return assignment.due_date && new Date() > new Date(assignment.due_date);
+};
+
 onMounted(fetchAssignments);
 </script>
+

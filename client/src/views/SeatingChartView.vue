@@ -2,8 +2,10 @@
 <template>
   <div>
     <h1 class="text-4xl font-bold text-slate-800 mb-8">座位表設定</h1>
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+    <!-- *** 修正：將網格系統從 6 欄改為 7 欄，以進一步縮小左側欄位的相對寬度 *** -->
+    <div class="grid grid-cols-1 lg:grid-cols-7 gap-8">
       
+      <!-- 左側欄位維持佔 1 欄，但相對寬度變得更小了 -->
       <div class="lg:col-span-1 card h-full">
         <h2 class="text-2xl font-semibold mb-4">學生列表</h2>
         <div class="mb-4">
@@ -33,13 +35,14 @@
           自動排列
         </button>
          <button @click="saveSeatingChart" class="w-full btn btn-primary px-0">
-          儲存座位表
+          儲存座位
         </button>
         <p v-if="successMessage" class="text-green-600 mt-2">{{ successMessage }}</p>
         <p v-if="error" class="text-red-600 mt-2">{{ error }}</p>
       </div>
 
-      <div class="lg:col-span-4 card p-4">
+      <!-- *** 修正：將右側座位表區域的欄位寬度從 5 欄擴大到 6 欄 *** -->
+      <div class="lg:col-span-6 card p-4">
         <div v-if="isLoading" class="text-center py-10">讀取中...</div>
         <div v-else :style="gridStyle" class="grid gap-4">
             <div v-for="i in (rows * cols)" :key="i"

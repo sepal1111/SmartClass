@@ -1,10 +1,19 @@
 <!-- File Path: /client/src/views/StudentPingPongView.vue -->
 <template>
     <div class="min-h-screen bg-sky-100 flex items-center justify-center p-4 font-sans">
-        <div class="w-full transition-all duration-300" :class="currentQuestion?.type === 'image' ? 'max-w-4xl' : 'max-w-lg'">
+        <div class="w-full transition-all duration-300" :class="currentQuestion?.type === 'image' || showResult?.questionType === 'image' ? 'max-w-4xl' : 'max-w-lg'">
+
+            <!-- 狀態六：活動結束 -->
+            <div v-if="activityEndedMessage" class="card p-8 text-center">
+                <h2 class="text-3xl font-bold text-slate-700">{{ activityEndedMessage }}</h2>
+                <p class="text-slate-500 mt-2 text-xl">此頁面將在幾秒後重設。</p>
+                <div class="mt-8">
+                    <svg class="h-16 w-16 text-slate-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+            </div>
 
             <!-- 狀態一：加入房間 -->
-            <div v-if="!session.joined" class="card p-8 transform transition-all hover:shadow-2xl duration-300">
+            <div v-else-if="!session.joined" class="card p-8 transform transition-all hover:shadow-2xl duration-300">
                 <h1 class="text-3xl font-bold text-center text-sky-600 mb-2">加入 PingPong 活動</h1>
                 <p class="text-center text-slate-500 mb-8">請輸入老師提供的房間代碼</p>
                 <form @submit.prevent="joinRoom" class="space-y-6">
@@ -25,20 +34,35 @@
                 </form>
             </div>
 
-            <!-- 狀態二：等待問題 -->
-            <div v-if="session.joined && !currentQuestion" class="text-center p-8 card">
-                 <h2 class="text-4xl font-bold text-slate-700">已成功加入！</h2>
-                 <p class="text-slate-500 mt-2 text-xl">請等待老師開始提問...</p>
-                 <div class="mt-12">
-                    <svg class="animate-spin h-16 w-16 text-sky-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                 </div>
+            <!-- 狀態五：顯示結果 -->
+            <div v-else-if="showResult" class="card p-8 text-center">
+                <!-- 有正確答案的題型 -->
+                <div v-if="showResult.isCorrect !== null">
+                    <div v-if="showResult.isCorrect">
+                        <svg class="mx-auto h-24 w-24 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <h2 class="mt-6 text-5xl font-bold text-green-600">答對了！</h2>
+                    </div>
+                    <div v-else>
+                        <svg class="mx-auto h-24 w-24 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
+                        <h2 class="mt-6 text-5xl font-bold text-red-600">答錯了</h2>
+                        <p v-if="showResult.correctAnswer" class="text-slate-500 mt-4 text-2xl">正確答案是： <span class="font-bold text-slate-700">{{ showResult.correctAnswer }}</span></p>
+                    </div>
+                </div>
+                <!-- 沒有正確答案的題型 -->
+                <div v-else>
+                    <h2 class="text-3xl font-bold text-slate-700 mb-6">您回答的內容：</h2>
+                    <div v-if="showResult.questionType === 'image'">
+                        <img :src="showResult.myAnswer" class="max-w-full max-h-80 mx-auto border rounded-lg bg-white p-2"/>
+                    </div>
+                    <div v-else class="text-2xl text-slate-600 bg-slate-100 p-4 rounded-lg break-words whitespace-pre-wrap">
+                        {{ showResult.myAnswer }}
+                    </div>
+                </div>
+                <p class="text-slate-400 mt-8 text-lg animate-pulse">準備下一題...</p>
             </div>
-            
+
             <!-- 狀態三：回答問題 -->
-            <div v-if="session.joined && currentQuestion && !submittedAnswer" class="card" :class="currentQuestion.type === 'image' ? 'p-4' : 'p-8'">
+            <div v-else-if="session.joined && currentQuestion && !submittedAnswer" class="card" :class="currentQuestion.type === 'image' ? 'p-4' : 'p-8'">
                 <div id="question-area" class="mb-6 max-h-60 overflow-y-auto p-2 text-xl" v-if="currentQuestion.htmlContent" v-html="currentQuestion.htmlContent"></div>
                 <div class="mb-6" v-else-if="currentQuestion.text">
                      <p class="text-3xl font-semibold text-center text-slate-800">{{ currentQuestion.text }}</p>
@@ -86,10 +110,22 @@
             </div>
 
              <!-- 狀態四：已送出答案 -->
-            <div v-if="session.joined && submittedAnswer" class="text-center p-8 card">
+            <div v-else-if="session.joined && submittedAnswer" class="text-center p-8 card">
                 <svg class="mx-auto h-24 w-24 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
                  <h2 class="mt-6 text-3xl font-bold text-green-600">已成功送出答案！</h2>
                  <p class="text-slate-500 mt-2 text-lg">請等待下一題或老師公佈結果...</p>
+            </div>
+
+            <!-- 狀態二：等待問題 -->
+            <div v-else-if="session.joined && !currentQuestion" class="text-center p-8 card">
+                 <h2 class="text-4xl font-bold text-slate-700">已成功加入！</h2>
+                 <p class="text-slate-500 mt-2 text-xl">請等待老師開始提問...</p>
+                 <div class="mt-12">
+                    <svg class="animate-spin h-16 w-16 text-sky-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                 </div>
             </div>
         </div>
     </div>
@@ -108,6 +144,9 @@ const error = ref('');
 const currentQuestion = ref(null);
 const submittedAnswer = ref(false);
 const shortAnswerText = ref('');
+const activityEndedMessage = ref('');
+const myLastAnswer = ref(null);
+const showResult = ref(null);
 
 const drawingCanvas = ref(null);
 const ctx = ref(null);
@@ -181,6 +220,7 @@ const joinRoom = () => {
 
 const submitAnswer = (answer) => {
     if(typeof answer === 'string' && !answer.trim()) return;
+    myLastAnswer.value = answer;
     socket.value.emit('student:submitAnswer', { roomCode: form.roomCode.toUpperCase(), answer });
     submittedAnswer.value = true;
 };
@@ -196,13 +236,41 @@ onMounted(() => {
 
     socket.value.on('connect', () => console.log("成功連接到 Socket.IO 伺服器"));
     socket.value.on('question:started', (question) => { currentQuestion.value = question; submittedAnswer.value = false; shortAnswerText.value = ''; });
-    socket.value.on('question:ended', () => { currentQuestion.value = null; submittedAnswer.value = true; });
+    
+    socket.value.on('question:ended', () => { 
+        const questionType = currentQuestion.value?.type;
+        const correctAnswer = currentQuestion.value?.correctAnswer;
+        let isCorrect = null;
+
+        if (questionType === 'multiple-choice' || questionType === 'true-false') {
+            isCorrect = myLastAnswer.value === correctAnswer;
+        }
+
+        showResult.value = {
+            myAnswer: myLastAnswer.value,
+            correctAnswer: correctAnswer,
+            questionType: questionType,
+            isCorrect: isCorrect
+        };
+
+        currentQuestion.value = null; 
+        submittedAnswer.value = false; 
+
+        setTimeout(() => {
+            showResult.value = null;
+            myLastAnswer.value = null;
+        }, 5000);
+    });
+
     socket.value.on('activity:ended', (message) => {
-        alert(message || '老師已結束活動，將返回加入頁面。');
+        activityEndedMessage.value = message || '老師已結束活動。';
         session.joined = false;
         currentQuestion.value = null;
         submittedAnswer.value = false;
-        error.value = '';
+        setTimeout(() => {
+            activityEndedMessage.value = '';
+            error.value = '';
+        }, 5000);
     });
 });
 
@@ -224,3 +292,4 @@ onUnmounted(() => { if (socket.value) socket.value.disconnect(); });
            hover:scale-105 hover:border-sky-400 hover:shadow-xl;
 }
 </style>
+
