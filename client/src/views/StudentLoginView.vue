@@ -75,8 +75,9 @@
       localStorage.setItem('studentToken', data.token);
       localStorage.setItem('studentInfo', JSON.stringify(data.student));
       
-      // 導向學生儀表板
-      router.push({ name: 'student-dashboard' });
+      // *** 修正：使用 window.location.href 強制瀏覽器完整重新載入 ***
+      // 導向學生儀表板並確保 App.vue 重新初始化
+      window.location.href = '/student/dashboard';
   
     } catch (err) {
       error.value = err.message;
@@ -84,3 +85,4 @@
   };
   </script>
   
+

@@ -12,6 +12,8 @@ const http = require('http');
 const { Server } = require("socket.io");
 const os = require('os');
 const open = require('open'); // 引入 open 套件
+const crypto = require('crypto'); // ** 步驟 1: 引入 crypto 模組 **
+
 
 const app = express();
 const server = http.createServer(app);
@@ -22,7 +24,7 @@ const io = new Server(server, {
   }
 });
 
-const SECRET_KEY = 'your_very_secret_key'; 
+const SECRET_KEY = crypto.randomBytes(32).toString('hex');
 
 app.use(cors());
 const jsonParser = express.json();
@@ -160,6 +162,36 @@ app.post('/api/auth/teacher/register', jsonParser, (req, res) => {
         res.status(500).json({ error: '資料庫錯誤，無法建立帳號。' });
     }
 });
+
+// *** 新增開始 ***
+// 新增一個 API 端點來驗證 token 的有效性
+app.get('/api/auth/teacher/verify', authenticateToken, (req, res) => {
+    // 如果 authenticateToken 中介軟體成功執行，代表 token 是有效的。
+    // 我們可以回傳儲存在 req.user (來自 token) 中的使用者資訊。
+    const user = db.prepare('SELECT id, name, username FROM teachers WHERE id = ?').get(req.user.id);
+    if (user) {
+        res.json({ teacher: user });
+    } else {
+        // 雖然 token 有效，但在資料庫中找不到該使用者 (極罕見情況)
+        res.status(404).json({ error: '找不到與此 token 相關聯的使用者。' });
+    }
+});
+
+// 新增：學生 Token 驗證端點
+app.get('/api/auth/student/verify', authenticateToken, (req, res) => {
+    // 檢查 token 的類型是否為學生
+    if (req.user.type !== 'student') {
+        return res.status(403).json({ error: '無效的憑證類型。' });
+    }
+    const user = db.prepare('SELECT id, name, student_id, account, class, seat_number, gender FROM students WHERE id = ?').get(req.user.id);
+    if (user) {
+        res.json({ student: user });
+    } else {
+        res.status(404).json({ error: '找不到與此 token 相關聯的學生。' });
+    }
+});
+// *** 新增結束 ***
+
 app.post('/api/auth/teacher/login', jsonParser, (req, res) => {
     const { username, password } = req.body;
     const user = db.prepare('SELECT * FROM teachers WHERE username = ?').get(username);
@@ -938,4 +970,6 @@ server.listen(PORT, '0.0.0.0', () => {
         open(`http://${HOST}:${PORT}`);
     }
 });
+
+
 

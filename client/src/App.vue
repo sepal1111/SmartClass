@@ -1,6 +1,15 @@
 <!-- File Path: /client/src/App.vue -->
 <template>
-  <div v-if="layout === 'default' && teacherIsAuthenticated" class="flex h-screen bg-slate-50 font-sans">
+  <!-- 增加一個載入畫面，用於在驗證 token 時顯示，防止畫面閃爍 -->
+  <div v-if="isVerifyingAuth" class="h-screen w-screen flex flex-col items-center justify-center bg-slate-100 text-slate-600">
+      <svg class="animate-spin h-12 w-12 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <p class="mt-4 text-lg font-medium">正在驗證您的身分...</p>
+  </div>
+
+  <div v-else-if="layout === 'default' && teacherIsAuthenticated" class="flex h-screen bg-slate-50 font-sans">
     <!-- Sidebar Navigation -->
     <aside class="w-60 bg-white border-r border-slate-200 flex flex-col">
       <div class="p-6 border-b border-slate-200">
@@ -67,45 +76,99 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { authFetch } from '@/utils/api';
 
 const route = useRoute();
 const router = useRouter();
 
 const teacherIsAuthenticated = ref(false);
 const teacherInfo = ref({});
+const studentIsAuthenticated = ref(false);
+const studentInfo = ref({});
+const isVerifyingAuth = ref(true);
 
-const checkAuth = () => {
-  const token = localStorage.getItem('teacherToken');
-  const info = localStorage.getItem('teacherInfo');
-  teacherIsAuthenticated.value = !!token;
-  teacherInfo.value = info ? JSON.parse(info) : {};
+// ** 全面重構的 checkAuth 函式 **
+const checkAuth = async () => {
+  isVerifyingAuth.value = true;
+  const teacherToken = localStorage.getItem('teacherToken');
+  const studentToken = localStorage.getItem('studentToken');
+  
+  // 優先驗證教師 Token
+  if (teacherToken) {
+    try {
+      // *** 修正：在 URL 加上時間戳記以強制請求，徹底避免瀏覽器快取 ***
+      const response = await authFetch(`/api/auth/teacher/verify?_=${new Date().getTime()}`);
+      if (response.ok) {
+        const data = await response.json();
+        teacherIsAuthenticated.value = true;
+        teacherInfo.value = data.teacher;
+        localStorage.setItem('teacherInfo', JSON.stringify(data.teacher));
+      } else {
+        throw new Error('Teacher token invalid');
+      }
+    } catch (error) {
+      console.error("驗證教師失敗:", error);
+      clearAuthData();
+    }
+  // 如果沒有教師 Token，再驗證學生 Token
+  } else if (studentToken) {
+    try {
+      // *** 修正：在 URL 加上時間戳記以強制請求，徹底避免瀏覽器快取 ***
+      const response = await authFetch(`/api/auth/student/verify?_=${new Date().getTime()}`);
+       if (response.ok) {
+        const data = await response.json();
+        studentIsAuthenticated.value = true;
+        studentInfo.value = data.student;
+        localStorage.setItem('studentInfo', JSON.stringify(data.student));
+      } else {
+        throw new Error('Student token invalid');
+      }
+    } catch (error) {
+      console.error("驗證學生失敗:", error);
+      clearAuthData();
+    }
+  // 如果都沒有 Token，就清理狀態
+  } else {
+    clearAuthData();
+  }
+
+  isVerifyingAuth.value = false;
 };
 
-const layout = computed(() => route.meta.layout || 'default');
+// ** 統一的登出/清理函式 **
+const clearAuthData = () => {
+    localStorage.removeItem('teacherToken');
+    localStorage.removeItem('teacherInfo');
+    localStorage.removeItem('studentToken');
+    localStorage.removeItem('studentInfo');
+    teacherIsAuthenticated.value = false;
+    teacherInfo.value = {};
+    studentIsAuthenticated.value = false;
+    studentInfo.value = {};
+};
+
+const layout = computed(() => {
+    // 即使學生已登入，儀表板也應使用乾淨佈局
+    if (studentIsAuthenticated.value && route.name !== 'home' && route.name !== 'auth') {
+        return 'clean';
+    }
+    return route.meta.layout || 'default';
+});
 
 const logout = () => {
-  localStorage.clear(); // 清除所有本地存儲資料，確保完全登出
-  checkAuth();
-  // 強制重新載入頁面到登入頁，確保所有狀態被重置
+  clearAuthData();
+  // 使用重載導向到登入頁，確保狀態完全重置
   window.location.href = '/auth';
-};
-
-const handleStorageChange = (event) => {
-  if (event.key === 'teacherToken' || event.key === 'teacherInfo') {
-    checkAuth();
-  }
 };
 
 onMounted(() => {
   checkAuth();
-  window.addEventListener('storage', handleStorageChange);
-  router.afterEach(() => {
-    checkAuth();
-  });
+  // 監聽 storage 變化，以同步不同分頁的登入狀態
+  window.addEventListener('storage', checkAuth);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('storage', handleStorageChange);
+  window.removeEventListener('storage', checkAuth);
 });
 </script>
 

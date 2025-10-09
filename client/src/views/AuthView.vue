@@ -141,17 +141,22 @@ const handleLogin = async () => {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
     
+    // *** 修正開始：登入後強制頁面重載 ***
     if (isTeacherLogin) {
       localStorage.setItem('teacherToken', data.token);
       localStorage.setItem('teacherInfo', JSON.stringify(data.teacher));
-      router.push({ name: 'home' });
+      // 使用 window.location.href 強制瀏覽器完整重新載入，確保 App.vue 重新初始化
+      window.location.href = '/'; 
     } else {
       localStorage.setItem('studentToken', data.token);
       localStorage.setItem('studentInfo', JSON.stringify(data.student));
-      router.push({ name: 'student-dashboard' });
+      // 同上，導向學生儀表板並重載
+      window.location.href = '/student/dashboard'; 
     }
+    // *** 修正結束 ***
   } catch (err) { error.value = err.message; }
 };
 
 const goToPingPong = () => router.push({ name: 'pingpong-student' });
 </script>
+
