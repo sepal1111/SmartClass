@@ -17,7 +17,8 @@
         <div class="flex-grow">
           <span v-if="set.subject_name" class="px-2 py-1 text-xs font-semibold rounded-full bg-sky-100 text-sky-800">{{ set.subject_name }}</span>
           <h3 class="text-2xl font-bold text-slate-800 mt-2">{{ set.title }}</h3>
-          <p class="text-sm text-slate-500 mt-2">建立於: {{ new Date(set.created_at).toLocaleDateString() }}</p>
+          <p class="text-sm text-slate-500 mt-2">題目數量: {{ set.question_count || 0 }} 題</p>
+          <p class="text-sm text-slate-500 mt-1">建立於: {{ new Date(set.created_at).toLocaleDateString() }}</p>
         </div>
         <div class="mt-6 grid grid-cols-2 gap-3">
           <button @click="openQuestionsModal(set)" class="btn bg-slate-600 hover:bg-slate-700 w-full">管理題目</button>
@@ -84,8 +85,8 @@
                         <div>
                             <p class="font-bold text-lg">{{ index + 1 }}. <span v-html="question.question_text || '無題目文字'"></span></p>
                             <div class="grid grid-cols-2 gap-x-8 gap-y-2 mt-2 pl-6">
-                                <div v-for="(opt, i) in question.options" :key="i" class="flex items-center" :class="{'font-bold text-green-600': opt.isCorrect}">
-                                  {{ opt.text }} <svg v-if="opt.isCorrect" class="w-5 h-5 ml-1 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                <div v-for="(opt, i) in JSON.parse(question.options)" :key="i" class="flex items-center" :class="{'font-bold text-green-600': opt === question.correct_answer}">
+                                  {{ opt }} <svg v-if="opt === question.correct_answer" class="w-5 h-5 ml-1 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
                                 </div>
                             </div>
                         </div>
@@ -110,24 +111,20 @@
                     <h3 class="text-xl font-bold mb-4">{{ currentQuestion.id ? '編輯題目' : '新增題目' }}</h3>
                     <div class="space-y-4">
                         <div>
-                           <label class="block text-sm font-medium text-slate-700">題目內容 (可留空)</label>
-                           <div ref="questionEditor" contenteditable="true" v-html="currentQuestion.question_text" class="mt-1 w-full min-h-[100px] p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-400"></div>
+                           <label class="block text-sm font-medium text-slate-700">題目內容</label>
+                           <input type="text" v-model="currentQuestion.question_text" class="mt-1 form-input">
                         </div>
                          <div>
-                            <label class="block text-sm font-medium text-slate-700">選項 (至少2個，最多4個)</label>
+                            <label class="block text-sm font-medium text-slate-700">選項與答案</label>
                             <div v-for="(option, index) in currentQuestion.options" :key="index" class="flex items-center mt-2 gap-2">
-                                <input type="text" v-model="option.text" class="form-input flex-grow" required>
+                                <input type="text" v-model="option.text" class="form-input flex-grow" required :placeholder="`選項 ${index + 1}`">
                                 <label class="flex items-center gap-1.5">
-                                    <input type="radio" :name="'correct-option-' + currentQuestion.id" :value="index" @change="setCorrectOption(index)" :checked="option.isCorrect">
+                                    <input type="radio" :name="'correct-option-' + currentQuestion.id" :value="option.text" v-model="currentQuestion.correct_answer">
                                     正確
                                 </label>
-                                <button type="button" @click="removeOption(index)" v-if="currentQuestion.options.length > 2" class="text-red-500">&times;</button>
+                                <button type="button" @click="removeOption(index)" v-if="currentQuestion.options.length > 2" class="text-red-500 text-xl font-bold">&times;</button>
                             </div>
                             <button type="button" @click="addOption" v-if="currentQuestion.options.length < 4" class="text-sm text-sky-600 mt-2">新增選項</button>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">作答時間 (秒)</label>
-                            <input type="number" v-model.number="currentQuestion.time_limit" class="mt-1 form-input w-24">
                         </div>
                     </div>
                 </div>
@@ -158,7 +155,6 @@ const questions = ref([]);
 
 const isQuestionModalOpen = ref(false);
 const currentQuestion = ref({});
-const questionEditor = ref(null);
 const quizFileInput = ref(null);
 
 
@@ -168,6 +164,7 @@ const openSetModal = (set) => {
   isSetModalOpen.value = true;
 };
 
+// *** 關鍵修正：加入完整的錯誤處理 ***
 const saveSet = async () => {
   const isEditing = !!currentSet.value.id;
   const url = isEditing ? `/api/quiz-sets/${currentSet.value.id}` : '/api/quiz-sets';
@@ -175,15 +172,30 @@ const saveSet = async () => {
   
   try {
     const res = await authFetch(url, { method, body: JSON.stringify(currentSet.value) });
+    
+    // 檢查後端回應是否成功
+    if (!res.ok) {
+        const errorData = await res.json();
+        // 拋出一個包含後端錯誤訊息的 Error 物件
+        throw new Error(errorData.error || '儲存失敗，請檢查您的輸入');
+    }
+
     const savedSet = await res.json();
+    
     if (isEditing) {
       const index = quizSets.value.findIndex(s => s.id === savedSet.id);
-      quizSets.value[index] = savedSet;
+      if (index !== -1) {
+        quizSets.value[index] = savedSet;
+      }
     } else {
       quizSets.value.unshift(savedSet);
     }
     isSetModalOpen.value = false;
-  } catch (error) { console.error("儲存測驗集失敗:", error); }
+  } catch (error) { 
+      console.error("儲存測驗集失敗:", error);
+      // 使用 alert 彈出友善的錯誤提示
+      alert(`儲存失敗: ${error.message}`);
+  }
 };
 
 const deleteSet = async (setId) => {
@@ -220,54 +232,65 @@ const closeQuestionsModal = () => {
 };
 
 const openQuestionModal = (question) => {
-  currentQuestion.value = question ? JSON.parse(JSON.stringify(question)) : { // Deep copy
-    quiz_set_id: selectedSet.value.id,
-    question_text: '',
-    options: [{ text: '', isCorrect: true }, { text: '', isCorrect: false }],
-    time_limit: 20
-  };
+  if (question) {
+    currentQuestion.value = {
+        ...question,
+        options: JSON.parse(question.options).map(opt => ({ text: opt })),
+    };
+    currentQuestion.value.correct_answer = question.correct_answer;
+  } else {
+    currentQuestion.value = {
+        quiz_set_id: selectedSet.value.id,
+        question_text: '',
+        options: [{ text: '' }, { text: '' }],
+        correct_answer: ''
+    };
+  }
   isQuestionModalOpen.value = true;
 };
 
+
 const addOption = () => {
     if (currentQuestion.value.options.length < 4) {
-        currentQuestion.value.options.push({ text: '', isCorrect: false });
+        currentQuestion.value.options.push({ text: '' });
     }
 };
 
 const removeOption = (index) => {
     if (currentQuestion.value.options.length > 2) {
-        // If removing the correct answer, make the first one correct
-        if (currentQuestion.value.options[index].isCorrect) {
-            currentQuestion.value.options[0].isCorrect = true;
-        }
         currentQuestion.value.options.splice(index, 1);
     }
 };
 
-const setCorrectOption = (selectedIndex) => {
-    currentQuestion.value.options.forEach((opt, index) => {
-        opt.isCorrect = (index === selectedIndex);
-    });
-};
-
 const saveQuestion = async () => {
-    currentQuestion.value.question_text = questionEditor.value.innerHTML;
     const isEditing = !!currentQuestion.value.id;
     const url = isEditing ? `/api/quiz-questions/${currentQuestion.value.id}` : '/api/quiz-questions';
     const method = isEditing ? 'PUT' : 'POST';
 
+    const payload = {
+        ...currentQuestion.value,
+        options: currentQuestion.value.options.map(opt => opt.text)
+    };
+
     try {
-        const res = await authFetch(url, { method, body: JSON.stringify(currentQuestion.value) });
+        const res = await authFetch(url, { method, body: JSON.stringify(payload) });
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || '儲存題目失敗');
+        }
         const savedQuestion = await res.json();
+        
         if (isEditing) {
             const index = questions.value.findIndex(q => q.id === savedQuestion.id);
-            questions.value[index] = savedQuestion;
+            if (index !== -1) questions.value[index] = savedQuestion;
         } else {
             questions.value.push(savedQuestion);
         }
         isQuestionModalOpen.value = false;
-    } catch (error) { console.error("儲存題目失敗:", error); }
+    } catch (error) { 
+        console.error("儲存題目失敗:", error); 
+        alert(`儲存失敗: ${error.message}`);
+    }
 };
 
 const deleteQuestion = async (questionId) => {
@@ -313,6 +336,9 @@ onMounted(async () => {
       authFetch('/api/quiz-sets'),
       authFetch('/api/subjects')
     ]);
+    if (!setsRes.ok || !subjectsRes.ok) {
+        throw new Error('無法載入初始資料');
+    }
     quizSets.value = await setsRes.json();
     subjects.value = await subjectsRes.json();
   } catch (error) {

@@ -508,43 +508,85 @@ app.post('/api/performance', authenticateToken, jsonParser, (req, res) => { cons
 
 
 // --- QuizRace APIs ---
+// *** 關鍵修正：整個 QuizRace API 區塊 ***
+
+// 取得所有測驗集
 app.get('/api/quiz-sets', authenticateToken, (req, res) => {
     try {
         const sets = db.prepare(`
-            SELECT qs.*, COUNT(qq.id) as question_count 
+            SELECT 
+                qs.*, 
+                s.name as subject_name,
+                COUNT(qq.id) as question_count 
             FROM quiz_sets qs 
+            LEFT JOIN subjects s ON qs.subject_id = s.id
             LEFT JOIN quiz_questions qq ON qs.id = qq.quiz_set_id 
-            GROUP BY qs.id
+            GROUP BY qs.id 
             ORDER BY qs.created_at DESC
         `).all();
         res.json(sets);
     } catch (err) {
-        res.status(500).json({ error: "無法讀取測驗集" });
+        console.error("無法讀取測驗集:", err);
+        res.status(500).json({ error: "無法從伺服器讀取測驗集" });
     }
 });
 
+// 建立新測驗集
 app.post('/api/quiz-sets', authenticateToken, jsonParser, (req, res) => {
-    const { name, subject } = req.body;
-    if (!name) return res.status(400).json({ error: '測驗集名稱為必填' });
+    const { title, subject_id } = req.body; // 修正：接收 title 和 subject_id
+    if (!title) {
+        return res.status(400).json({ error: '測驗集標題為必填項' });
+    }
     try {
-        const info = db.prepare('INSERT INTO quiz_sets (name, subject, teacher_id) VALUES (?, ?, ?)').run(name, subject, req.user.id);
-        const newSet = db.prepare('SELECT *, 0 as question_count FROM quiz_sets WHERE id = ?').get(info.lastInsertRowid);
+        // 修正：使用正確的欄位名稱
+        const info = db.prepare('INSERT INTO quiz_sets (title, subject_id, teacher_id) VALUES (?, ?, ?)')
+                       .run(title, subject_id, req.user.id);
+        
+        // 修正：回傳包含 subject_name 的完整資料
+        const newSet = db.prepare(`
+            SELECT qs.*, s.name as subject_name, 0 as question_count 
+            FROM quiz_sets qs
+            LEFT JOIN subjects s ON qs.subject_id = s.id
+            WHERE qs.id = ?
+        `).get(info.lastInsertRowid);
+
         res.status(201).json(newSet);
     } catch (err) {
+        console.error("無法建立測驗集:", err);
         res.status(500).json({ error: '資料庫錯誤，無法建立測驗集' });
     }
 });
 
+// 更新測驗集
 app.put('/api/quiz-sets/:id', authenticateToken, jsonParser, (req, res) => {
-    const { name, subject } = req.body;
-    if (!name) return res.status(400).json({ error: '測驗集名稱為必填' });
+    const { title, subject_id } = req.body; // 修正：接收 title 和 subject_id
+    if (!title) {
+        return res.status(400).json({ error: '測驗集標題為必填項' });
+    }
     try {
-        db.prepare('UPDATE quiz_sets SET name = ?, subject = ? WHERE id = ?').run(name, subject, req.params.id);
-        res.json({ message: '更新成功' });
+        // 修正：更新正確的欄位
+        const info = db.prepare('UPDATE quiz_sets SET title = ?, subject_id = ? WHERE id = ? AND teacher_id = ?')
+                       .run(title, subject_id, req.params.id, req.user.id);
+        
+        if (info.changes === 0) {
+            return res.status(404).json({ error: '找不到測驗集或權限不足' });
+        }
+        
+        // 修正：回傳更新後的完整資料
+        const updatedSet = db.prepare(`
+            SELECT qs.*, s.name as subject_name, (SELECT COUNT(*) FROM quiz_questions WHERE quiz_set_id = qs.id) as question_count
+            FROM quiz_sets qs
+            LEFT JOIN subjects s ON qs.subject_id = s.id
+            WHERE qs.id = ?
+        `).get(req.params.id);
+
+        res.json(updatedSet);
     } catch (err) {
+        console.error("無法更新測驗集:", err);
         res.status(500).json({ error: '資料庫錯誤，無法更新測驗集' });
     }
 });
+
 
 app.delete('/api/quiz-sets/:id', authenticateToken, (req, res) => {
     try {
