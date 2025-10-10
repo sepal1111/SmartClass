@@ -11,8 +11,8 @@ const fs = require('fs');
 const http = require('http');
 const { Server } = require("socket.io");
 const os = require('os');
-const open = require('open'); // 引入 open 套件
-const crypto = require('crypto'); // ** 步驟 1: 引入 crypto 模組 **
+const open = require('open');
+const crypto = require('crypto');
 
 
 const app = express();
@@ -49,23 +49,20 @@ function getBestIP() {
     for (const name in interfaces) {
         const lowerCaseName = name.toLowerCase();
         if (blacklist.some(keyword => lowerCaseName.includes(keyword))) {
-            continue; // 排除虛擬、藍芽、USB 網卡
+            continue;
         }
 
         for (const net of interfaces[name]) {
-            // 優先選擇 Wi-Fi 或乙太網路
             if (net.family === 'IPv4' && !net.internal) {
                 if (lowerCaseName.includes('wi-fi') || lowerCaseName.includes('wlan') || lowerCaseName.includes('無線') || lowerCaseName.includes('ethernet') || lowerCaseName.includes('乙太')) {
                     preferredCandidate = net.address;
                 }
-                // 如果沒有更好的，先將就用
                 if (!bestCandidate) {
                     bestCandidate = net.address;
                 }
             }
         }
     }
-    // 如果有找到 Wi-Fi 或乙太網路，就用它，否則用第一個找到的，再不行就用 localhost
     return preferredCandidate || bestCandidate || '127.0.0.1';
 }
 
@@ -73,13 +70,9 @@ function getBestIP() {
 const HOST = getBestIP();
 const PORT = 3000;
 
-// 在 Express 啟動後提供前端靜態檔案服務
 if (isPkg) {
-    // 在 pkg 封裝環境中，靜態檔案會被打包進 snapshot filesystem
-    // 根目錄會指向執行檔所在的位置
     app.use(express.static(path.join(baseDir, 'dist')));
 } else {
-    // 在開發環境中，指向 client/dist
     app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
 }
 
@@ -163,23 +156,16 @@ app.post('/api/auth/teacher/register', jsonParser, (req, res) => {
     }
 });
 
-// *** 新增開始 ***
-// 新增一個 API 端點來驗證 token 的有效性
 app.get('/api/auth/teacher/verify', authenticateToken, (req, res) => {
-    // 如果 authenticateToken 中介軟體成功執行，代表 token 是有效的。
-    // 我們可以回傳儲存在 req.user (來自 token) 中的使用者資訊。
     const user = db.prepare('SELECT id, name, username FROM teachers WHERE id = ?').get(req.user.id);
     if (user) {
         res.json({ teacher: user });
     } else {
-        // 雖然 token 有效，但在資料庫中找不到該使用者 (極罕見情況)
         res.status(404).json({ error: '找不到與此 token 相關聯的使用者。' });
     }
 });
 
-// 新增：學生 Token 驗證端點
 app.get('/api/auth/student/verify', authenticateToken, (req, res) => {
-    // 檢查 token 的類型是否為學生
     if (req.user.type !== 'student') {
         return res.status(403).json({ error: '無效的憑證類型。' });
     }
@@ -190,7 +176,6 @@ app.get('/api/auth/student/verify', authenticateToken, (req, res) => {
         res.status(404).json({ error: '找不到與此 token 相關聯的學生。' });
     }
 });
-// *** 新增結束 ***
 
 app.post('/api/auth/teacher/login', jsonParser, (req, res) => {
     const { username, password } = req.body;
@@ -226,12 +211,10 @@ app.delete('/api/students/:id', authenticateToken, (req, res) => {
     }
 
     const transaction = db.transaction(() => {
-        // Manually cascade deletes since PRAGMA foreign_keys might not be enabled
         db.prepare('DELETE FROM performance WHERE student_id = ?').run(student.student_id);
         db.prepare('DELETE FROM attendance WHERE student_id = ?').run(student.student_id);
         db.prepare('DELETE FROM grades WHERE student_id = ?').run(student.student_id);
         
-        // Remove from seating chart
         const chartRow = db.prepare("SELECT * FROM seating_charts WHERE name = 'default'").get();
         if (chartRow && chartRow.seats) {
             try {
@@ -248,7 +231,6 @@ app.delete('/api/students/:id', authenticateToken, (req, res) => {
                 }
             } catch (e) {
                 console.error("Error updating seating chart during student deletion:", e);
-                // Don't throw, just log the error and continue with student deletion
             }
         }
         
@@ -410,7 +392,6 @@ app.get('/api/assignments/:id/submissions', authenticateToken, (req, res) => {
 
         const allStudents = db.prepare('SELECT student_id, name, seat_number FROM students').all();
         
-        // *** 關鍵修正：產生完整的 Base URL ***
         const baseUrl = `http://${HOST}:${PORT}`;
 
         const studentDirs = fs.readdirSync(assignmentDir, { withFileTypes: true })
@@ -428,7 +409,6 @@ app.get('/api/assignments/:id/submissions', authenticateToken, (req, res) => {
                 .filter(fileName => fileName !== '_LATE.txt')
                 .map(fileName => ({
                     name: fileName,
-                    // *** 關鍵修正：使用完整的 URL ***
                     url: `${baseUrl}/uploads/${encodeURIComponent(assignment.title.replace(/[\/\\?%*:|"<>]/g, '-'))}/${encodeURIComponent(dirName)}/${encodeURIComponent(fileName)}`
                 }));
             
@@ -457,7 +437,7 @@ app.get('/api/classroom-status', authenticateToken, (req, res) => {
     }
     try {
         const chartRow = db.prepare("SELECT * FROM seating_charts WHERE name = 'default'").get();
-        let chart = { rows: 6, cols: 5, seats: {} }; // Default structure
+        let chart = { rows: 6, cols: 5, seats: {} }; 
         
         if (chartRow && chartRow.seats) {
             try {
@@ -466,15 +446,13 @@ app.get('/api/classroom-status', authenticateToken, (req, res) => {
                 chart.seats = JSON.parse(chartRow.seats);
             } catch (e) {
                 console.error("Failed to parse seating chart JSON:", e);
-                // Continue with an empty chart if parsing fails
             }
         }
         
-        // Get a set of all valid student IDs from the students table
         const allStudentIdsInDb = new Set(db.prepare('SELECT student_id FROM students').all().map(s => s.student_id));
 
         const studentsOnChart = Object.values(chart.seats)
-            .filter(s => s && s.student_id && allStudentIdsInDb.has(s.student_id)) // Ensure student exists
+            .filter(s => s && s.student_id && allStudentIdsInDb.has(s.student_id)) 
             .map(s => s.student_id);
 
         if (studentsOnChart.length > 0) {
@@ -508,9 +486,6 @@ app.post('/api/performance', authenticateToken, jsonParser, (req, res) => { cons
 
 
 // --- QuizRace APIs ---
-// *** 關鍵修正：整個 QuizRace API 區塊 ***
-
-// 取得所有測驗集
 app.get('/api/quiz-sets', authenticateToken, (req, res) => {
     try {
         const sets = db.prepare(`
@@ -526,68 +501,42 @@ app.get('/api/quiz-sets', authenticateToken, (req, res) => {
         `).all();
         res.json(sets);
     } catch (err) {
-        console.error("無法讀取測驗集:", err);
-        res.status(500).json({ error: "無法從伺服器讀取測驗集" });
+        res.status(500).json({ error: "無法讀取測驗集" });
     }
 });
-
-// 建立新測驗集
 app.post('/api/quiz-sets', authenticateToken, jsonParser, (req, res) => {
-    const { title, subject_id } = req.body; // 修正：接收 title 和 subject_id
-    if (!title) {
-        return res.status(400).json({ error: '測驗集標題為必填項' });
-    }
+    const { title, subject_id } = req.body;
+    if (!title) return res.status(400).json({ error: '測驗集標題為必填' });
     try {
-        // 修正：使用正確的欄位名稱
-        const info = db.prepare('INSERT INTO quiz_sets (title, subject_id, teacher_id) VALUES (?, ?, ?)')
-                       .run(title, subject_id, req.user.id);
-        
-        // 修正：回傳包含 subject_name 的完整資料
+        const info = db.prepare('INSERT INTO quiz_sets (title, subject_id, teacher_id) VALUES (?, ?, ?)').run(title, subject_id, req.user.id);
         const newSet = db.prepare(`
             SELECT qs.*, s.name as subject_name, 0 as question_count 
             FROM quiz_sets qs
             LEFT JOIN subjects s ON qs.subject_id = s.id
             WHERE qs.id = ?
         `).get(info.lastInsertRowid);
-
         res.status(201).json(newSet);
     } catch (err) {
-        console.error("無法建立測驗集:", err);
         res.status(500).json({ error: '資料庫錯誤，無法建立測驗集' });
     }
 });
-
-// 更新測驗集
 app.put('/api/quiz-sets/:id', authenticateToken, jsonParser, (req, res) => {
-    const { title, subject_id } = req.body; // 修正：接收 title 和 subject_id
-    if (!title) {
-        return res.status(400).json({ error: '測驗集標題為必填項' });
-    }
+    const { title, subject_id } = req.body;
+    if (!title) return res.status(400).json({ error: '測驗集標題為必填' });
     try {
-        // 修正：更新正確的欄位
-        const info = db.prepare('UPDATE quiz_sets SET title = ?, subject_id = ? WHERE id = ? AND teacher_id = ?')
-                       .run(title, subject_id, req.params.id, req.user.id);
-        
-        if (info.changes === 0) {
-            return res.status(404).json({ error: '找不到測驗集或權限不足' });
-        }
-        
-        // 修正：回傳更新後的完整資料
+        const info = db.prepare('UPDATE quiz_sets SET title = ?, subject_id = ? WHERE id = ?').run(title, subject_id, req.params.id);
+        if (info.changes === 0) return res.status(404).json({ error: '找不到測驗集' });
         const updatedSet = db.prepare(`
             SELECT qs.*, s.name as subject_name, (SELECT COUNT(*) FROM quiz_questions WHERE quiz_set_id = qs.id) as question_count
             FROM quiz_sets qs
             LEFT JOIN subjects s ON qs.subject_id = s.id
             WHERE qs.id = ?
         `).get(req.params.id);
-
         res.json(updatedSet);
     } catch (err) {
-        console.error("無法更新測驗集:", err);
         res.status(500).json({ error: '資料庫錯誤，無法更新測驗集' });
     }
 });
-
-
 app.delete('/api/quiz-sets/:id', authenticateToken, (req, res) => {
     try {
         db.prepare('DELETE FROM quiz_sets WHERE id = ?').run(req.params.id);
@@ -596,7 +545,6 @@ app.delete('/api/quiz-sets/:id', authenticateToken, (req, res) => {
         res.status(500).json({ error: '資料庫錯誤，無法刪除測驗集' });
     }
 });
-
 app.get('/api/quiz-questions/:quiz_set_id', authenticateToken, (req, res) => {
     try {
         const questions = db.prepare('SELECT * FROM quiz_questions WHERE quiz_set_id = ? ORDER BY id ASC').all(req.params.quiz_set_id);
@@ -605,7 +553,6 @@ app.get('/api/quiz-questions/:quiz_set_id', authenticateToken, (req, res) => {
         res.status(500).json({ error: '無法讀取題目' });
     }
 });
-
 app.post('/api/quiz-questions', authenticateToken, jsonParser, (req, res) => {
     const { quiz_set_id, question_text, options, correct_answer } = req.body;
     try {
@@ -616,7 +563,6 @@ app.post('/api/quiz-questions', authenticateToken, jsonParser, (req, res) => {
         res.status(500).json({ error: '資料庫錯誤，無法新增題目' });
     }
 });
-
 app.put('/api/quiz-questions/:id', authenticateToken, jsonParser, (req, res) => {
     const { question_text, options, correct_answer } = req.body;
     try {
@@ -626,7 +572,6 @@ app.put('/api/quiz-questions/:id', authenticateToken, jsonParser, (req, res) => 
         res.status(500).json({ error: '資料庫錯誤，無法更新題目' });
     }
 });
-
 app.delete('/api/quiz-questions/:id', authenticateToken, (req, res) => {
     try {
         db.prepare('DELETE FROM quiz_questions WHERE id = ?').run(req.params.id);
@@ -636,7 +581,6 @@ app.delete('/api/quiz-questions/:id', authenticateToken, (req, res) => {
     }
 });
 
-// 新增：匯入題庫 API
 app.post('/api/quiz-questions/import/:quiz_set_id', authenticateToken, fileImportUpload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: '沒有上傳檔案。' });
     
@@ -647,197 +591,203 @@ app.post('/api/quiz-questions/import/:quiz_set_id', authenticateToken, fileImpor
         const sheetName = workbook.SheetNames[0];
         const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
 
-        // 移除標題行
         data.shift(); 
 
-        const questionsToInsert = data.map(row => {
-            const [question_text, correct_answer, opt1, opt2, opt3, opt4] = row;
-            
-            // 過濾掉空選項
-            const options = [opt1, opt2, opt3, opt4].filter(opt => opt !== undefined && opt !== null && opt !== '');
-            
-            // 處理是非題的答案
-            let final_correct_answer = correct_answer;
-            if (options.length === 2 && options.includes('○') && options.includes('╳')) {
-                if (correct_answer === 1 || String(correct_answer).trim() === '○') {
-                    final_correct_answer = '○';
-                } else if (correct_answer === 2 || String(correct_answer).trim() === '╳') {
-                    final_correct_answer = '╳';
-                }
-            } else {
-                 final_correct_answer = String(options[parseInt(correct_answer, 10) - 1]);
+        const questionsToInsert = [];
+        const failedRows = [];
+
+        data.forEach((row, index) => {
+            const rowNumber = index + 2;
+            const [question_text, correct_answer_index, opt1, opt2, opt3, opt4] = row;
+
+            if (!question_text || String(question_text).trim() === '') {
+                failedRows.push({ row: rowNumber, reason: '「題目文字」欄位為空' });
+                return;
             }
 
+            const options = [opt1, opt2, opt3, opt4].filter(opt => opt !== undefined && opt !== null && String(opt).trim() !== '');
+            if (options.length < 2) {
+                failedRows.push({ row: rowNumber, reason: '至少需要提供兩個有效選項' });
+                return;
+            }
 
-            return {
+            const correctAnswerNum = parseInt(correct_answer_index, 10);
+            if (isNaN(correctAnswerNum) || correctAnswerNum < 1 || correctAnswerNum > options.length) {
+                failedRows.push({ row: rowNumber, reason: `「正確答案」欄位 (${correct_answer_index}) 必須是 1 到 ${options.length} 之間的數字` });
+                return;
+            }
+
+            const final_correct_answer_text = options[correctAnswerNum - 1];
+
+            questionsToInsert.push({
                 quiz_set_id: parseInt(quiz_set_id, 10),
-                question_text: String(question_text || ''),
+                question_text: String(question_text).trim(),
                 options: JSON.stringify(options),
-                correct_answer: final_correct_answer
-            };
-        }).filter(q => q.question_text.trim() !== ''); // 過濾掉沒有題目文字的行
-
-        if (questionsToInsert.length === 0) {
-            return res.status(400).json({ error: '檔案中沒有有效的題目資料。' });
-        }
-
-        const insertStmt = db.prepare('INSERT INTO quiz_questions (quiz_set_id, question_text, options, correct_answer) VALUES (@quiz_set_id, @question_text, @options, @correct_answer)');
-        
-        const insertMany = db.transaction((questions) => {
-            for (const question of questions) insertStmt.run(question);
+                correct_answer: String(final_correct_answer_text)
+            });
         });
 
-        insertMany(questionsToInsert);
+        if (questionsToInsert.length > 0) {
+            const insertStmt = db.prepare('INSERT INTO quiz_questions (quiz_set_id, question_text, options, correct_answer) VALUES (@quiz_set_id, @question_text, @options, @correct_answer)');
+            const insertMany = db.transaction((questions) => {
+                for (const question of questions) insertStmt.run(question);
+            });
+            insertMany(questionsToInsert);
+        }
 
-        res.json({ message: `成功匯入 ${questionsToInsert.length} 筆題目。` });
+        let message = `處理完成！成功匯入 ${questionsToInsert.length} 筆題目。`;
+        if (failedRows.length > 0) {
+            const errorDetails = failedRows.map(f => `  - 第 ${f.row} 行: ${f.reason}`).join('\n');
+            message += `\n\n有 ${failedRows.length} 筆資料匯入失敗：\n${errorDetails}`;
+            return res.status(400).json({ error: message, details: failedRows });
+        }
+        
+        res.json({ message });
 
     } catch (error) {
-        console.error("匯入題庫時發生錯誤:", error);
-        res.status(500).json({ error: '檔案處理失敗，請確認格式是否正確。' });
+        console.error("匯入題庫時發生嚴重錯誤:", error);
+        res.status(500).json({ error: '檔案處理失敗，請確認檔案為標準 Excel 格式 (.xlsx, .xls, .csv) 且內容無誤。' });
     }
 });
 
 
+// --- Socket.IO ---
 
-// --- Socket.IO PingPong 邏輯 ---
+// *** 關鍵修正：將 quizRaceRooms 移到全域範圍 ***
 let pingPongRooms = {}; 
+let quizRaceRooms = {};
 
-const endAnswering = (roomCode) => {
-    const room = pingPongRooms[roomCode];
-    if (room && room.state === 'question') {
-        room.state = 'results';
-        console.log(`[${roomCode}] 作答結束`);
-        io.to(roomCode).emit('question:ended', room.answers);
+const startNextQuestion = (roomCode) => {
+    const room = quizRaceRooms[roomCode];
+    if (!room) return;
+    
+    if (room.questionTimeout) clearTimeout(room.questionTimeout);
+    if (room.leaderboardTimeout) clearTimeout(room.leaderboardTimeout);
+
+    room.currentQuestionIndex++;
+    if (room.currentQuestionIndex >= room.questions.length) {
+        finishGame(roomCode);
+        return;
     }
+
+    room.state = 'question';
+    Object.values(room.players).forEach(p => p.answered = false);
+
+    const question = room.questions[room.currentQuestionIndex];
+    
+    const questionForStudent = {
+        index: room.currentQuestionIndex,
+        total: room.questions.length,
+        text: question.question_text,
+        options: JSON.parse(question.options),
+    };
+    const questionForTeacher = {
+        ...questionForStudent,
+        correct_answer: question.correct_answer,
+    };
+    
+    io.to(room.teacherId).emit('quiz:newQuestion', questionForTeacher);
+    io.to(roomCode).except(room.teacherId).emit('quiz:newQuestion', questionForStudent);
+    
+    room.questionStartTime = Date.now();
+
+    room.questionTimeout = setTimeout(() => {
+        if (room.state === 'question') {
+            showLeaderboard(roomCode);
+        }
+    }, 15000);
+};
+
+const showLeaderboard = (roomCode) => {
+    const room = quizRaceRooms[roomCode];
+    if (!room || room.state !== 'question') return;
+    
+    if (room.questionTimeout) clearTimeout(room.questionTimeout);
+
+    room.state = 'leaderboard';
+    const leaderboard = Object.values(room.players)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10);
+
+    io.to(roomCode).emit('quiz:showLeaderboard', leaderboard);
+};
+
+const finishGame = (roomCode) => {
+    const room = quizRaceRooms[roomCode];
+    if (!room) return;
+
+    if (room.questionTimeout) clearTimeout(room.questionTimeout);
+    if (room.leaderboardTimeout) clearTimeout(room.leaderboardTimeout);
+    
+    room.state = 'finished';
+    const finalRankings = Object.values(room.players).sort((a, b) => b.score - a.score);
+    io.to(roomCode).emit('quiz:finished', finalRankings);
+    console.log(`[QuizRace ${roomCode}] 遊戲結束`);
+    delete quizRaceRooms[roomCode];
 };
 
 io.on('connection', (socket) => {
     console.log('一個客戶端已連線:', socket.id);
 
     // --- PingPong Sockets ---
+    const endAnswering = (roomCode) => {
+      const room = pingPongRooms[roomCode];
+      if (room && room.state === 'question') {
+          room.state = 'results';
+          io.to(roomCode).emit('question:ended', room.answers);
+      }
+    };
     socket.on('teacher:createRoom', (callback) => {
-        let roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        let roomCode = Math.floor(100000 + Math.random() * 900000).toString();
         while(pingPongRooms[roomCode] || quizRaceRooms[roomCode]) {
-            roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            roomCode = Math.floor(100000 + Math.random() * 900000).toString();
         }
         socket.join(roomCode);
-        pingPongRooms[roomCode] = {
-            teacherId: socket.id,
-            students: [],
-            question: null,
-            answers: {},
-            state: 'waiting'
-        };
-        console.log(`[PingPong ${roomCode}] 老師 ${socket.id} 已建立房間`);
+        pingPongRooms[roomCode] = { teacherId: socket.id, students: [], question: null, answers: {}, state: 'waiting' };
         callback({ roomCode });
     });
-
-    socket.on('student:joinRoom', ({ roomCode, name }, callback) => {
-        const room = pingPongRooms[roomCode];
-        if (!room) return callback({ success: false, message: '找不到房間代碼。' });
-        if (room.state !== 'waiting') return callback({ success: false, message: '活動已開始，無法加入。' });
-
-        socket.join(roomCode);
-        room.students.push({ id: socket.id, name });
-        console.log(`[PingPong ${roomCode}] 學生 ${name} 已加入`);
-        io.to(room.teacherId).emit('student:joined', room.students);
-        callback({ success: true });
-    });
-
-    socket.on('teacher:startQuestion', ({ roomCode, question }) => {
-        const room = pingPongRooms[roomCode];
-        if (room && room.teacherId === socket.id) {
-            room.state = 'question';
-            room.question = question;
-            room.answers = {};
-            console.log(`[PingPong ${roomCode}] 老師開始提問`);
-            io.to(roomCode).except(room.teacherId).emit('question:started', question);
-            io.to(room.teacherId).emit('teacher:questionStarted');
-        }
-    });
-
-    socket.on('student:submitAnswer', ({ roomCode, answer }) => {
-        const room = pingPongRooms[roomCode];
-        if (room && room.state === 'question') {
-            const student = room.students.find(s => s.id === socket.id);
-            if (student && !room.answers[socket.id]) { // 防止重複作答
-                room.answers[socket.id] = { name: student.name, answer };
-                console.log(`[PingPong ${roomCode}] 學生 ${student.name} 回答了`);
-                io.to(room.teacherId).emit('student:answered', room.answers);
-                
-                // 檢查是否所有人都已回答
-                if (Object.keys(room.answers).length === room.students.length) {
-                    endAnswering(roomCode);
-                }
-            }
-        }
-    });
-
-    socket.on('teacher:stopAnswering', ({ roomCode }) => {
-        const room = pingPongRooms[roomCode];
-        if (room && room.teacherId === socket.id) {
-            endAnswering(roomCode);
-        }
-    });
-    
-    socket.on('teacher:endActivity', ({ roomCode }) => {
-        const room = pingPongRooms[roomCode];
-        if (room && room.teacherId === socket.id) {
-            console.log(`[PingPong ${roomCode}] 老師結束了活動`);
-            io.to(roomCode).emit('activity:ended');
-            delete pingPongRooms[roomCode];
-        }
-    });
+    socket.on('student:joinRoom', ({ roomCode, name }, callback) => { const room = pingPongRooms[roomCode]; if (!room) return callback({ success: false, message: '找不到房間' }); if (room.state !== 'waiting') return callback({ success: false, message: '活動已開始' }); socket.join(roomCode); room.students.push({ id: socket.id, name }); io.to(room.teacherId).emit('student:joined', room.students); callback({ success: true }); });
+    socket.on('teacher:startQuestion', ({ roomCode, question }) => { const room = pingPongRooms[roomCode]; if (room && room.teacherId === socket.id) { room.state = 'question'; room.question = question; room.answers = {}; io.to(roomCode).except(room.teacherId).emit('question:started', question); io.to(room.teacherId).emit('teacher:questionStarted'); } });
+    socket.on('student:submitAnswer', ({ roomCode, answer }) => { const room = pingPongRooms[roomCode]; if (room && room.state === 'question') { const student = room.students.find(s => s.id === socket.id); if (student && !room.answers[socket.id]) { room.answers[socket.id] = { name: student.name, answer }; io.to(room.teacherId).emit('student:answered', room.answers); if (Object.keys(room.answers).length === room.students.length) { endAnswering(roomCode); } } } });
+    socket.on('teacher:stopAnswering', ({ roomCode }) => { const room = pingPongRooms[roomCode]; if (room && room.teacherId === socket.id) { endAnswering(roomCode); } });
+    socket.on('teacher:endActivity', ({ roomCode }) => { const room = pingPongRooms[roomCode]; if (room && room.teacherId === socket.id) { io.to(roomCode).emit('activity:ended'); delete pingPongRooms[roomCode]; } });
     
     // --- QuizRace Sockets ---
-    let quizRaceRooms = {};
-
+    
     socket.on('quiz:teacher:create', ({ quizSetId }, callback) => {
         try {
             const questions = db.prepare('SELECT * FROM quiz_questions WHERE quiz_set_id = ?').all(quizSetId);
-            if (questions.length === 0) {
-                return callback({ error: '此題庫沒有題目，無法開始遊戲。' });
-            }
+            if (questions.length === 0) return callback({ error: '此題庫沒有題目' });
 
-            let roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            let roomCode = Math.floor(100000 + Math.random() * 900000).toString();
             while (quizRaceRooms[roomCode] || pingPongRooms[roomCode]) {
-                roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                roomCode = Math.floor(100000 + Math.random() * 900000).toString();
             }
 
             socket.join(roomCode);
             quizRaceRooms[roomCode] = {
                 teacherId: socket.id,
                 questions: questions,
-                players: {}, // { socketId: { name, score, streak } }
-                state: 'lobby', // lobby, question, leaderboard, finished
+                players: {},
+                state: 'lobby',
                 currentQuestionIndex: -1,
                 questionStartTime: 0,
             };
-
             console.log(`[QuizRace ${roomCode}] 遊戲已建立`);
             callback({ roomCode });
-        } catch (e) {
-            callback({ error: '建立遊戲失敗，資料庫錯誤。' });
-        }
+        } catch (e) { callback({ error: '建立遊戲失敗' }); }
     });
     
     socket.on('quiz:student:join', ({ roomCode, name }, callback) => {
         const room = quizRaceRooms[roomCode];
-        if (!room) {
-            return callback({ success: false, message: '找不到遊戲房間。' });
-        }
-        if (room.state !== 'lobby') {
-            return callback({ success: false, message: '遊戲已經開始，無法加入。' });
-        }
-        if (Object.values(room.players).some(p => p.name === name)) {
-            return callback({ success: false, message: '該名稱已被使用。' });
-        }
+        if (!room) return callback({ success: false, message: '找不到房間' });
+        if (room.state !== 'lobby') return callback({ success: false, message: '遊戲已開始' });
+        if (Object.values(room.players).some(p => p.name === name)) return callback({ success: false, message: '名稱已被使用' });
 
         socket.join(roomCode);
-        room.players[socket.id] = { name, score: 0, streak: 0 };
-
-        io.to(room.teacherId).emit('quiz:updatePlayers', Object.values(room.players));
-        callback({ success: true, name });
+        room.players[socket.id] = { name, score: 0, streak: 0, answered: false };
+        io.to(roomCode).emit('quiz:updatePlayers', Object.values(room.players));
+        callback({ success: true });
     });
 
     socket.on('quiz:teacher:start', ({ roomCode }) => {
@@ -847,6 +797,14 @@ io.on('connection', (socket) => {
         }
     });
     
+    socket.on('quiz:teacher:nextQuestion', ({ roomCode }) => {
+        const room = quizRaceRooms[roomCode];
+        if (room && room.teacherId === socket.id && room.state === 'leaderboard') {
+            if (room.leaderboardTimeout) clearTimeout(room.leaderboardTimeout);
+            startNextQuestion(roomCode);
+        }
+    });
+
     socket.on('quiz:student:answer', ({ roomCode, answer }) => {
         const room = quizRaceRooms[roomCode];
         if (!room || room.state !== 'question' || !room.players[socket.id] || room.players[socket.id].answered) return;
@@ -859,169 +817,73 @@ io.on('connection', (socket) => {
         const isCorrect = answer === question.correct_answer;
 
         if (isCorrect) {
-            const timeBonus = Math.max(0, 1000 - Math.floor(answerTime / 10)); // 10秒內答對有加分
+            const timeBonus = Math.max(0, 1000 - Math.floor(answerTime / 15));
             const streakBonus = player.streak * 100;
             player.score += (1000 + timeBonus + streakBonus);
             player.streak++;
-        } else {
-            player.streak = 0;
-        }
+        } else { player.streak = 0; }
 
         socket.emit('quiz:answerResult', { isCorrect, score: player.score });
         
+        io.to(roomCode).emit('quiz:updatePlayers', Object.values(room.players));
+        
         const allAnswered = Object.values(room.players).every(p => p.answered);
         if (allAnswered) {
+            if (room.questionTimeout) clearTimeout(room.questionTimeout);
             showLeaderboard(roomCode);
-        } else {
-             io.to(room.teacherId).emit('quiz:updatePlayers', Object.values(room.players));
         }
     });
-    
-    const startNextQuestion = (roomCode) => {
-        const room = quizRaceRooms[roomCode];
-        room.currentQuestionIndex++;
-        
-        if (room.currentQuestionIndex >= room.questions.length) {
-            finishGame(roomCode);
-            return;
-        }
-
-        room.state = 'question';
-        Object.values(room.players).forEach(p => p.answered = false);
-
-        const question = room.questions[room.currentQuestionIndex];
-        // Don't send the correct answer to students
-        const questionForStudent = {
-            index: room.currentQuestionIndex,
-            total: room.questions.length,
-            text: question.question_text,
-            options: JSON.parse(question.options),
-        };
-        
-        io.to(roomCode).emit('quiz:newQuestion', questionForStudent);
-        room.questionStartTime = Date.now();
-
-        // 伺服器端計時器，15秒後自動結束作答
-        setTimeout(() => {
-            if (room.state === 'question') {
-                showLeaderboard(roomCode);
-            }
-        }, 15000);
-    };
-
-    const showLeaderboard = (roomCode) => {
-        const room = quizRaceRooms[roomCode];
-        if (!room || room.state !== 'question') return;
-
-        room.state = 'leaderboard';
-        const leaderboard = Object.values(room.players)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 5); // 取前五名
-
-        io.to(roomCode).emit('quiz:showLeaderboard', leaderboard);
-
-        // 5秒後自動進入下一題
-        setTimeout(() => {
-            if(room.state === 'leaderboard') {
-               startNextQuestion(roomCode);
-            }
-        }, 5000);
-    };
-    
-    const finishGame = (roomCode) => {
-        const room = quizRaceRooms[roomCode];
-        if (!room) return;
-        room.state = 'finished';
-        const finalRankings = Object.values(room.players).sort((a, b) => b.score - a.score);
-        io.to(roomCode).emit('quiz:finished', finalRankings);
-        console.log(`[QuizRace ${roomCode}] 遊戲結束`);
-        delete quizRaceRooms[roomCode];
-    };
-
 
     socket.on('disconnect', () => {
         console.log('一個客戶端已斷線:', socket.id);
-
-        // 處理 PingPong 房間
+        
+        // PingPong disconnect
         for (const roomCode in pingPongRooms) {
             const room = pingPongRooms[roomCode];
-            if (room.teacherId === socket.id) {
-                console.log(`[PingPong ${roomCode}] 老師斷線，關閉房間。`);
-                io.to(roomCode).emit('activity:ended', '老師已離線，活動結束。');
+             if (room.teacherId === socket.id) {
+                io.to(roomCode).emit('activity:ended', '老師已離線');
                 delete pingPongRooms[roomCode];
                 break;
             }
             const studentIndex = room.students.findIndex(s => s.id === socket.id);
-            if (studentIndex !== -1) {
-                const studentName = room.students[studentIndex].name;
+            if (studentIndex > -1) {
                 room.students.splice(studentIndex, 1);
-                console.log(`[PingPong ${roomCode}] 學生 ${studentName} 已離線`);
                 io.to(room.teacherId).emit('student:left', room.students);
-                if (room.state === 'question' && Object.keys(room.answers).length === room.students.length && room.students.length > 0) {
-                    endAnswering(roomCode);
-                }
                 break;
             }
         }
         
-        // 處理 QuizRace 房間
+        // QuizRace disconnect
         for (const roomCode in quizRaceRooms) {
             const room = quizRaceRooms[roomCode];
              if (room.teacherId === socket.id) {
-                console.log(`[QuizRace ${roomCode}] 老師斷線，關閉遊戲。`);
-                io.to(roomCode).emit('quiz:finished', []); // 告訴客戶端遊戲結束
+                io.to(roomCode).emit('quiz:finished', []);
                 delete quizRaceRooms[roomCode];
                 break;
             }
             if (room.players[socket.id]) {
-                const playerName = room.players[socket.id].name;
                 delete room.players[socket.id];
-                console.log(`[QuizRace ${roomCode}] 玩家 ${playerName} 已離線`);
-                io.to(room.teacherId).emit('quiz:updatePlayers', Object.values(room.players));
+                io.to(roomCode).emit('quiz:updatePlayers', Object.values(room.players));
                 break;
             }
         }
     });
 });
 
-// 最後的 fallback，處理所有未匹配的 GET 請求，回傳 index.html
-if (isPkg) {
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(baseDir, 'dist', 'index.html'));
-    });
-} else {
-     app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
-    });
-}
 
+// --- 伺服器啟動 ---
 server.listen(PORT, '0.0.0.0', () => {
     const serverUrl = `http://${HOST}:${PORT}`;
-    
-    // --- 為主控台訊息加上顏色 ---
-    const colors = {
-      reset: "\x1b[0m",
-      bright: "\x1b[1m",
-      fg: {
-        green: "\x1b[32m",
-        cyan: "\x1b[36m",
-        yellow: "\x1b[33m",
-        red: "\x1b[31m",
-      }
-    };
-
-    console.log(``);
-    console.log(`${colors.bright}${colors.fg.green}後端伺服器正在 ${serverUrl} 運行${colors.reset}`);
-    console.log(``);    
+    const colors = { reset: "\x1b[0m", bright: "\x1b[1m", fg: { green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m" } };
+    console.log(`\n${colors.bright}${colors.fg.green}後端伺服器正在 ${serverUrl} 運行${colors.reset}`);
     console.log(`${colors.fg.yellow}學生端請連線至此網址，或掃描老師主畫面上的 QR Code${colors.reset}`);
-    console.log(``);
-    console.log(`${colors.fg.yellow}這個視窗是顯示伺服器運行的狀態，請勿關閉${colors.reset}`);
-    console.log(``);
-    console.log(`${colors.fg.red}課程結束後，關閉這個視窗即可停止伺服器運作${colors.reset}`);
-    console.log(``); 
-    // 只有在封裝後的執行檔環境才自動開啟瀏覽器
-    if (isPkg) {
-        open(`http://${HOST}:${PORT}`);
-    }
+    console.log(`${colors.fg.yellow}這個視窗是顯示伺服器運行的狀態，請勿關閉${colors.reset}\n`);
+    if (isPkg) { open(serverUrl); }
+});
+
+// Fallback for SPA
+app.get('*', (req, res) => {
+  const indexPath = isPkg ? path.join(baseDir, 'dist', 'index.html') : path.join(__dirname, '..', 'client', 'dist', 'index.html');
+  res.sendFile(indexPath);
 });
 

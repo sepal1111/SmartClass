@@ -147,15 +147,14 @@ const initDb = () => {
     );
     `;
 
-    // 測驗題目
+    // *** 關鍵修正：在 quiz_questions 資料表中新增 correct_answer 欄位 ***
     const createQuizQuestionsTable = `
     CREATE TABLE IF NOT EXISTS quiz_questions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       quiz_set_id INTEGER NOT NULL,
       question_text TEXT,
-      options TEXT NOT NULL, -- JSON string: [{"text": "Option 1", "isCorrect": true}, ...]
-      time_limit INTEGER DEFAULT 20,
-      points_type TEXT DEFAULT 'standard', -- 'standard', 'double'
+      options TEXT NOT NULL,
+      correct_answer TEXT, -- 新增此欄位來儲存正確答案
       FOREIGN KEY (quiz_set_id) REFERENCES quiz_sets(id) ON DELETE CASCADE
     );
     `;
