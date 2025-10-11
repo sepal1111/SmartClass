@@ -877,7 +877,10 @@ server.listen(PORT, '0.0.0.0', () => {
     const colors = { reset: "\x1b[0m", bright: "\x1b[1m", fg: { green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m" } };
     console.log(`\n${colors.bright}${colors.fg.green}後端伺服器正在 ${serverUrl} 運行${colors.reset}`);
     console.log(`${colors.fg.yellow}學生端請連線至此網址，或掃描老師主畫面上的 QR Code${colors.reset}`);
-    console.log(`${colors.fg.yellow}這個視窗是顯示伺服器運行的狀態，請勿關閉${colors.reset}\n`);
+    console.log(`${colors.fg.red}${colors.reset}\n`);
+    console.log(`${colors.fg.green}這個視窗是顯示伺服器運行的狀態，請勿關閉！${colors.reset}\n`);
+    console.log(`${colors.fg.red}${colors.reset}\n`);
+    console.log(`${colors.fg.red}課程結束後，關閉此視窗，伺服器與網站即停止運作！${colors.reset}\n`);
     if (isPkg) { open(serverUrl); }
 });
 

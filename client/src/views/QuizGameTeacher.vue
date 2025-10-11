@@ -13,15 +13,21 @@
     </div>
 
     <!-- 狀態二：遊戲大廳 (Lobby) -->
-    <div v-else-if="gameState === 'lobby'" class="w-full max-w-5xl text-center">
+    <div v-else-if="gameState === 'lobby'" class="w-full max-w-5xl text-center relative">
+      <button @click="backToManager" class="absolute top-0 left-0 btn btn-secondary flex items-center gap-2 text-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        返回題庫管理
+      </button>
+
       <h1 class="text-5xl font-bold text-yellow-300">遊戲大廳</h1>
-      <p class="text-2xl text-gray-300 mt-4">請學生掃描 QR Code 或輸入以下房間代碼加入</p>
+      <!-- *** 修正：移除 QR Code 相關文字 *** -->
+      <p class="text-2xl text-gray-300 mt-4">請學生輸入以下房間代碼加入</p>
       
-      <div class="mt-8 p-8 bg-gray-800 rounded-2xl shadow-lg flex flex-col md:flex-row items-center justify-center gap-8">
-        <div class="flex-shrink-0 p-3 bg-white rounded-lg">
-           <img :src="qrCodeUrl" alt="QR Code" class="w-48 h-48 md:w-56 md:h-56">
-        </div>
-        <div class="text-left">
+      <!-- *** 修正：移除 QR Code 區塊，並將剩餘內容置中 *** -->
+      <div class="mt-8 p-8 bg-gray-800 rounded-2xl shadow-lg flex items-center justify-center">
+        <div class="text-center">
           <p class="text-3xl text-gray-400">房間代碼</p>
           <p class="text-8xl font-mono font-bold tracking-widest text-white">{{ roomCode }}</p>
           <button @click="startGame" class="mt-6 w-full btn bg-green-500 hover:bg-green-600 text-2xl px-12 py-4 rounded-full" :disabled="players.length === 0">
@@ -49,11 +55,9 @@
             <div class="text-2xl font-bold">{{ answersCount }} / {{ players.length }} 人已作答</div>
         </div>
         <div class="flex-grow bg-white text-gray-900 flex flex-col items-center justify-center p-8 text-center rounded-b-lg">
-            <!-- *** 修正：使用 'text' 屬性來顯示題目文字 *** -->
             <div v-if="currentQuestion.text" v-html="currentQuestion.text" class="text-5xl font-bold"></div>
         </div>
         <div class="grid grid-cols-2 gap-4 p-4 mt-4">
-            <!-- *** 修正：移除正確答案的醒目提示 *** -->
             <div v-for="(option, index) in currentQuestion.options" :key="index" 
                  class="p-6 rounded-lg text-3xl font-bold flex items-center transition-all duration-300" 
                  :class="[optionColors[index]]">
@@ -127,7 +131,7 @@ const answersCount = ref(0);
 const leaderboard = ref([]);
 
 const optionColors = ['bg-red-600', 'bg-blue-600', 'bg-yellow-500', 'bg-green-600'];
-const qrCodeUrl = computed(() => `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${window.location.origin}/quiz/play?room=${roomCode.value}`);
+// *** 修正：移除 qrCodeUrl computed property ***
 const isLastQuestion = computed(() => questionIndex.value >= totalQuestions.value - 1);
 
 const getPodiumClass = (index) => {
@@ -153,7 +157,6 @@ onMounted(() => {
   socket.value = io("http://localhost:3000");
 
   socket.value.on('connect', () => {
-    // *** 修正：使用正確的事件名稱 'quiz:teacher:create' ***
     socket.value.emit('quiz:teacher:create', { quizSetId: props.setId }, (response) => {
       isLoading.value = false;
       if (response.roomCode) {
@@ -165,13 +168,11 @@ onMounted(() => {
     });
   });
 
-  // *** 修正：使用正確的事件名稱 'quiz:updatePlayers' ***
   socket.value.on('quiz:updatePlayers', (playerList) => {
     players.value = playerList;
     answersCount.value = playerList.filter(p => p.answered).length;
   });
 
-  // *** 修正：使用正確的事件名稱 'quiz:newQuestion' ***
   socket.value.on('quiz:newQuestion', (data) => {
       currentQuestion.value = data; 
       questionIndex.value = data.index;
@@ -190,14 +191,12 @@ onMounted(() => {
       }, 1000);
   });
   
-  // *** 修正：使用正確的事件名稱 'quiz:showLeaderboard' ***
   socket.value.on('quiz:showLeaderboard', (data) => {
       gameState.value = 'leaderboard';
       leaderboard.value = data;
       clearInterval(timerInterval.value);
   });
   
-  // *** 修正：使用正確的事件名稱 'quiz:finished' ***
   socket.value.on('quiz:finished', (finalLeaderboard) => {
       gameState.value = 'finished';
       leaderboard.value = finalLeaderboard;
