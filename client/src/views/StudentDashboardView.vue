@@ -7,7 +7,6 @@
           <h1 class="text-4xl font-bold text-slate-800">學生儀表板</h1>
           <p class="text-xl text-slate-600 mt-2">{{ student.name }} 同學，您好！</p>
         </div>
-        <!-- *** 修正：新增「加入搶答競賽」按鈕 *** -->
         <div class="flex items-center space-x-2 mt-4 sm:mt-0">
            <button @click="goToQuizRace" class="btn bg-yellow-500 hover:bg-yellow-600">加入搶答競賽</button>
            <button @click="goToPingPong" class="btn bg-teal-500 hover:bg-teal-600">加入 PingPong</button>
@@ -32,7 +31,11 @@
                     <span v-else>沒有繳交期限</span>
                 </p>
               </div>
+              <!-- *** 關鍵修正：調整按鈕與 input 結構 *** -->
               <div class="w-full md:w-auto md:ml-6 flex flex-col items-stretch" style="min-width: 150px;">
+                <!-- 將 file input 移至此處，確保它總是存在於 DOM 中，但保持隱藏 -->
+                <input type="file" @change="handleFileSelect($event, assignment.id)" :id="'file-upload-' + assignment.id" class="hidden" multiple>
+
                 <!-- 狀態: 已繳交 / 已補交 -->
                 <div v-if="assignment.hasSubmitted" 
                      class="w-full text-center py-3 px-6 text-base flex items-center justify-center gap-2 rounded-md font-bold"
@@ -41,7 +44,7 @@
                   <span>{{ assignment.isLate ? '已補交' : '已繳交' }}</span>
                 </div>
                 
-                <!-- 狀態: 未繳交，但可重複上傳 -->
+                <!-- 狀態: 重新上傳按鈕 (如果允許) -->
                 <button v-if="assignment.hasSubmitted && assignment.allow_resubmission" 
                         @click="triggerFileInput(assignment.id)" 
                         class="w-full mt-2 btn btn-secondary py-3 px-6 text-base flex items-center justify-center gap-2">
@@ -49,9 +52,8 @@
                     <span>重新上傳</span>
                 </button>
 
-                <!-- 狀態: 未繳交 -->
+                <!-- 狀態: 未繳交時的上傳按鈕 -->
                 <div v-if="!assignment.hasSubmitted">
-                  <input type="file" @change="handleFileSelect($event, assignment.id)" :id="'file-upload-' + assignment.id" class="hidden" multiple>
                   <button @click="triggerFileInput(assignment.id)" 
                           class="w-full btn py-3 px-6 text-base flex items-center justify-center gap-2"
                           :class="isOverdue(assignment) ? 'btn-danger' : 'btn-primary'">
@@ -162,7 +164,6 @@ const logout = () => {
 };
 const goToPingPong = () => { router.push({ name: 'pingpong-student' }); };
 
-// *** 新增：導向搶答競賽頁面的函式 ***
 const goToQuizRace = () => { router.push({ name: 'quiz-game-student' }); };
 
 const fetchAssignments = async () => {

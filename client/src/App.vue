@@ -1,6 +1,6 @@
 <!-- File Path: /client/src/App.vue -->
 <template>
-  <!-- 增加一個載入畫面，用於在驗證 token 時顯示，防止畫面閃爍 -->
+  <!-- 狀態一：正在驗證身分，顯示載入畫面 -->
   <div v-if="isVerifyingAuth" class="h-screen w-screen flex flex-col items-center justify-center bg-slate-100 text-slate-600">
       <svg class="animate-spin h-12 w-12 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -9,7 +9,9 @@
       <p class="mt-4 text-lg font-medium">正在驗證您的身分...</p>
   </div>
 
-  <div v-else-if="layout === 'default' && teacherIsAuthenticated" class="flex h-screen bg-slate-50 font-sans">
+  <!-- *** 關鍵修正：驗證完成後，根據教師登入狀態決定佈局 *** -->
+  <!-- 狀態二：教師已登入，顯示完整後台介面 -->
+  <div v-else-if="teacherIsAuthenticated" class="flex h-screen bg-slate-50 font-sans">
     <!-- Sidebar Navigation -->
     <aside class="w-60 bg-white border-r border-slate-200 flex flex-col">
       <div class="p-6 border-b border-slate-200">
@@ -17,7 +19,6 @@
         <p class="text-base text-slate-500 mt-2">歡迎，{{ teacherInfo.name }} 老師</p>
       </div>
       <nav class="flex-grow p-4 space-y-2">
-        <!-- Reordered nav items for better workflow -->
         <router-link to="/dashboard" class="nav-link">
           <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 00-4-4H3V9h2a4 4 0 004-4V3l4 4-4 4zm11-1V9l-4-4 4-4v2a4 4 0 014 4h2v2h-2a4 4 0 01-4 4z"></path></svg>
           <span class="text-lg">課堂儀表板</span>
@@ -67,7 +68,7 @@
     </main>
   </div>
 
-  <!-- Clean Layout (for login, student pages, etc.) -->
+  <!-- 狀態三：非教師 (學生或未登入)，顯示乾淨佈局 -->
   <div v-else>
       <router-view />
   </div>
@@ -87,16 +88,13 @@ const studentIsAuthenticated = ref(false);
 const studentInfo = ref({});
 const isVerifyingAuth = ref(true);
 
-// ** 全面重構的 checkAuth 函式 **
 const checkAuth = async () => {
   isVerifyingAuth.value = true;
   const teacherToken = localStorage.getItem('teacherToken');
   const studentToken = localStorage.getItem('studentToken');
   
-  // 優先驗證教師 Token
   if (teacherToken) {
     try {
-      // *** 修正：在 URL 加上時間戳記以強制請求，徹底避免瀏覽器快取 ***
       const response = await authFetch(`/api/auth/teacher/verify?_=${new Date().getTime()}`);
       if (response.ok) {
         const data = await response.json();
@@ -109,11 +107,10 @@ const checkAuth = async () => {
     } catch (error) {
       console.error("驗證教師失敗:", error);
       clearAuthData();
+      router.push('/auth'); // 驗證失敗導向登入頁
     }
-  // 如果沒有教師 Token，再驗證學生 Token
   } else if (studentToken) {
     try {
-      // *** 修正：在 URL 加上時間戳記以強制請求，徹底避免瀏覽器快取 ***
       const response = await authFetch(`/api/auth/student/verify?_=${new Date().getTime()}`);
        if (response.ok) {
         const data = await response.json();
@@ -126,16 +123,19 @@ const checkAuth = async () => {
     } catch (error) {
       console.error("驗證學生失敗:", error);
       clearAuthData();
+      router.push('/auth'); // 驗證失敗導向登入頁
     }
-  // 如果都沒有 Token，就清理狀態
   } else {
     clearAuthData();
+    // 如果目標頁面不是登入頁，且需要登入，則導向登入頁
+    if(route.name !== 'auth' && (route.meta.requiresAuth || route.meta.requiresStudentAuth)){
+        router.push('/auth');
+    }
   }
 
   isVerifyingAuth.value = false;
 };
 
-// ** 統一的登出/清理函式 **
 const clearAuthData = () => {
     localStorage.removeItem('teacherToken');
     localStorage.removeItem('teacherInfo');
@@ -147,23 +147,16 @@ const clearAuthData = () => {
     studentInfo.value = {};
 };
 
-const layout = computed(() => {
-    // 即使學生已登入，儀表板也應使用乾淨佈局
-    if (studentIsAuthenticated.value && route.name !== 'home' && route.name !== 'auth') {
-        return 'clean';
-    }
-    return route.meta.layout || 'default';
-});
+// 不再需要 layout computed，因為模板邏輯已簡化
+// const layout = computed(() => { ... });
 
 const logout = () => {
   clearAuthData();
-  // 使用重載導向到登入頁，確保狀態完全重置
   window.location.href = '/auth';
 };
 
 onMounted(() => {
   checkAuth();
-  // 監聽 storage 變化，以同步不同分頁的登入狀態
   window.addEventListener('storage', checkAuth);
 });
 

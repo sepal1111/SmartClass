@@ -22,12 +22,8 @@
                     <p class="text-sm text-slate-300">房間代碼</p>
                     <p class="text-5xl font-bold text-white tracking-widest">{{ roomCode }}</p>
                 </div>
-                 <div class="mt-4 flex justify-center">
-                    <div class="p-2 border-4 border-slate-200 rounded-lg bg-white">
-                        <img :src="qrCodeUrl" alt="QR Code" class="w-48 h-48">
-                    </div>
-                </div>
-                <p class="text-center text-slate-500 mt-2 text-sm">請學生掃描 QR Code 或輸入代碼加入</p>
+                <!-- *** 修正：移除 QR Code 區塊 *** -->
+                <p class="text-center text-slate-500 mt-4 text-base">請學生輸入此代碼加入活動</p>
 
                 <hr class="my-6">
 
@@ -185,7 +181,7 @@ import JSZip from 'jszip';
 
 const socket = ref(null);
 const roomCode = ref('');
-const qrCodeUrl = computed(() => `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${window.location.origin}/pingpong-student?room=${roomCode.value}`);
+// *** 修正：移除 qrCodeUrl computed property ***
 const connectedStudents = ref([]);
 const activityState = ref('waiting');
 const question = reactive({ type: 'multiple-choice', htmlContent: '', correctAnswer: 'A' });
@@ -333,3 +329,4 @@ onMounted(() => {
 });
 onUnmounted(() => { if (socket.value) { if (roomCode.value) socket.value.emit('teacher:endActivity', { roomCode: roomCode.value }); socket.value.disconnect(); } });
 </script>
+

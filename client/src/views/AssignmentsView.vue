@@ -122,7 +122,6 @@
                                     <div v-else class="w-full h-24 bg-slate-100 rounded-md mb-2 flex items-center justify-center relative">
                                         <svg v-if="getFileType(file.name) === 'pdf'" class="h-12 w-12 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /> <polyline points="14 2 14 8 20 8" /> <line x1="16" y1="13" x2="8" y2="13" /> <line x1="16" y1="17" x2="8" y2="17" /> <polyline points="10 9 9 9 8 9" /></svg>
                                         <svg v-else-if="getFileType(file.name) === 'video'" class="h-12 w-12 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polygon points="23 7 16 12 23 17 23 7" /> <rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></svg>
-                                        <!-- *** 新增：音訊檔案圖示 *** -->
                                         <svg v-else-if="getFileType(file.name) === 'audio'" class="h-12 w-12 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M9 18V5l12-2v13" /> <circle cx="6" cy="18" r="3" /> <circle cx="18" cy="16" r="3" /></svg>
                                         <svg v-else class="h-12 w-12 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
@@ -142,21 +141,21 @@
         </div>
     </div>
 
+    <!-- *** 關鍵修正：調整燈箱的尺寸與內容顯示方式 *** -->
     <div v-if="isLightboxOpen" class="fixed z-50 inset-0 overflow-y-auto" @click="isLightboxOpen = false">
         <div class="flex items-center justify-center min-h-screen p-4 text-center">
             <div class="fixed inset-0 bg-gray-900 bg-opacity-80 transition-opacity"></div>
             
-            <div @click.stop class="inline-block bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all my-8 max-w-6xl w-full max-h-[90vh] flex flex-col" role="dialog" aria-modal="true">
+            <div @click.stop class="inline-block bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-[95vw] h-[90vh] flex flex-col" role="dialog" aria-modal="true">
                 <div class="p-4 border-b flex justify-between items-center bg-slate-50">
                     <h3 class="text-xl font-bold text-slate-800 truncate">{{ lightboxFile ? getCleanFileName(lightboxFile.name) : '' }}</h3>
                     <button @click="isLightboxOpen = false" class="text-4xl text-gray-500 hover:text-gray-800">&times;</button>
                 </div>
-                <div class="flex-grow p-4 flex items-center justify-center bg-slate-200 overflow-hidden">
+                <div class="flex-grow p-2 flex items-center justify-center bg-slate-200 overflow-hidden">
                     <template v-if="lightboxFile">
                         <img v-if="getFileType(lightboxFile.name) === 'image'" :src="lightboxFile.url" class="max-w-full max-h-full object-contain">
-                        <video v-else-if="getFileType(lightboxFile.name) === 'video'" :src="lightboxFile.url" controls class="max-w-full max-h-full"></video>
-                        <!-- *** 新增：音訊播放器 *** -->
-                        <audio v-else-if="getFileType(lightboxFile.name) === 'audio'" :src="lightboxFile.url" controls class="w-full"></audio>
+                        <video v-else-if="getFileType(lightboxFile.name) === 'video'" :src="lightboxFile.url" controls class="max-w-full max-h-full object-contain"></video>
+                        <audio v-else-if="getFileType(lightboxFile.name) === 'audio'" :src="lightboxFile.url" controls class="w-full max-w-lg"></audio>
                         <iframe v-else-if="getFileType(lightboxFile.name) === 'pdf'" :src="lightboxFile.url" class="w-full h-full border-0"></iframe>
                     </template>
                 </div>
@@ -304,7 +303,6 @@ const closeSubmissionsModal = () => {
     selectedStudent.value = null;
 };
 
-// *** 修正：加入音訊檔案類型判斷 ***
 const getFileType = (fileName) => {
     if (!fileName) return 'other';
     const extension = fileName.split('.').pop().toLowerCase();
@@ -317,7 +315,13 @@ const getFileType = (fileName) => {
 
 const getCleanFileName = (fileName) => {
     if (!fileName) return '';
-    return fileName.split('_').slice(3).join('_');
+    // 假設檔名格式為 '作業標題_座號_姓名_原始檔名'
+    // 移除前三個部分
+    const parts = fileName.split('_');
+    if (parts.length > 3) {
+        return parts.slice(3).join('_');
+    }
+    return fileName;
 };
 
 const handleFileClick = (file, event) => {
