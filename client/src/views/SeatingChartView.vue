@@ -2,65 +2,74 @@
 <template>
   <div>
     <h1 class="text-4xl font-bold text-slate-800 mb-8">座位表設定</h1>
-    <!-- *** 修正：將網格系統從 6 欄改為 7 欄，以進一步縮小左側欄位的相對寬度 *** -->
-    <div class="grid grid-cols-1 lg:grid-cols-7 gap-8">
-      
-      <!-- 左側欄位維持佔 1 欄，但相對寬度變得更小了 -->
-      <div class="lg:col-span-1 card h-full">
-        <h2 class="text-2xl font-semibold mb-4">學生列表</h2>
-        <div class="mb-4">
-            <input type="text" v-model="searchTerm" placeholder="搜尋學生..." class="form-input w-full">
-        </div>
-        <div class="max-h-[50vh] overflow-y-auto pr-2">
-          <div v-for="student in filteredStudents" :key="student.id"
-               draggable="true" @dragstart="startDrag($event, student)"
-               class="p-3 mb-2 border rounded-lg cursor-grab bg-slate-100 hover:bg-sky-100 transition-colors flex items-center gap-3">
-            <span class="font-bold text-sky-600">{{ formatSeatNumber(student.seat_number) }}</span>
-            <span>{{ student.name }}</span>
+
+    <!-- 版面與操作卡片 -->
+    <div class="card p-6 mb-8">
+      <h2 class="text-2xl font-semibold mb-4">版面與操作</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 border rounded-lg bg-slate-50">
+        <div>
+          <h3 class="text-lg font-medium text-slate-700 mb-2">座位表尺寸</h3>
+          <div class="space-y-3">
+            <div class="flex items-center">
+              <label class="w-1/3 font-medium text-slate-700">行數 (Rows):</label>
+              <input type="number" v-model.number="rows" min="1" max="20" class="form-input w-2/3 text-center">
+            </div>
+            <div class="flex items-center">
+              <label class="w-1/3 font-medium text-slate-700">列數 (Cols):</label>
+              <input type="number" v-model.number="cols" min="1" max="20" class="form-input w-2/3 text-center">
+            </div>
           </div>
         </div>
-        <hr class="my-6">
-        <h2 class="text-2xl font-semibold mb-4">版面設定</h2>
-        <div class="space-y-3 mb-4">
-            <div class="flex items-center">
-              <label class="w-1/2 font-medium text-slate-700">行數:</label>
-              <input type="number" v-model.number="rows" min="1" max="20" class="form-input w-1/2 text-center">
-            </div>
-            <div class="flex items-center">
-              <label class="w-1/2 font-medium text-slate-700">列數:</label>
-              <input type="number" v-model.number="cols" min="1" max="20" class="form-input w-1/2 text-center">
-            </div>
+        <div>
+          <h3 class="text-lg font-medium text-slate-700 mb-2">功能按鈕</h3>
+          <div class="space-y-3">
+            <button @click="autoArrangeBySeatNumber" class="w-full btn btn-success">依座號自動排列</button>
+            <button @click="saveSeatingChart" class="w-full btn btn-primary">儲存座位表</button>
+          </div>
         </div>
-        <button @click="autoArrangeBySeatNumber" class="w-full btn btn-success mb-3 px-0">
-          自動排列
-        </button>
-         <button @click="saveSeatingChart" class="w-full btn btn-primary px-0">
-          儲存座位
-        </button>
-        <p v-if="successMessage" class="text-green-600 mt-2">{{ successMessage }}</p>
-        <p v-if="error" class="text-red-600 mt-2">{{ error }}</p>
       </div>
+      <p v-if="successMessage" class="text-green-600 mt-4 font-semibold">{{ successMessage }}</p>
+      <p v-if="error" class="text-red-600 mt-4 font-semibold">{{ error }}</p>
+    </div>
 
-      <!-- *** 修正：將右側座位表區域的欄位寬度從 5 欄擴大到 6 欄 *** -->
-      <div class="lg:col-span-6 card p-4">
-        <div v-if="isLoading" class="text-center py-10">讀取中...</div>
-        <div v-else :style="gridStyle" class="grid gap-4">
-            <div v-for="i in (rows * cols)" :key="i"
-               @drop="onDrop($event, i-1)" @dragover.prevent @dragenter.prevent
-               class="border-2 border-dashed rounded-lg h-36 flex flex-col justify-center items-center relative"
-               :class="{'bg-slate-50 hover:border-sky-400': !seats[i-1], 'bg-sky-50 border-sky-200': seats[i-1]}">
-                
-                <div v-if="seats[i-1]" class="w-full h-full p-2 relative flex flex-col justify-center items-center text-center">
-                    <img :src="getPhotoUrl(seats[i-1])" @error="onImageError" class="w-16 h-16 object-cover rounded-full bg-gray-200 mb-2 border-2 border-white shadow">
-                    <p class="font-bold truncate text-slate-800">
-                      <span class="text-sky-600">{{ formatSeatNumber(seats[i-1].seat_number) }}.</span> {{ seats[i-1].name }}
-                    </p>
-                    <p class="text-gray-500 text-sm truncate">{{ seats[i-1].account }}</p>
-                    <button @click="removeStudentFromSeat(i-1)" class="absolute top-1 right-1 text-red-500 hover:text-red-700 bg-white rounded-full h-6 w-6 flex items-center justify-center shadow">✕</button>
-                </div>
-                 <div v-else class="text-slate-400 text-sm">(空位)</div>
-            </div>
+    <!-- 學生列表卡片 -->
+    <div class="card p-6 mb-8">
+      <h2 class="text-2xl font-semibold mb-4">未安排座位學生</h2>
+      <div class="mb-4">
+          <input type="text" v-model="searchTerm" placeholder="搜尋學生..." class="form-input w-full">
+      </div>
+      <div class="max-h-[40vh] overflow-y-auto pr-2 border rounded-lg p-2 bg-slate-50">
+        <div v-for="student in filteredStudents" :key="student.id"
+             draggable="true" @dragstart="startDrag($event, student)"
+             class="p-3 mb-2 border rounded-lg cursor-grab bg-white hover:bg-sky-100 transition-colors flex items-center gap-3 shadow-sm">
+          <span class="font-bold text-sky-600">{{ formatSeatNumber(student.seat_number) }}</span>
+          <span>{{ student.name }}</span>
         </div>
+        <div v-if="filteredStudents.length === 0" class="text-center py-10 text-slate-500">
+          所有學生皆已安排座位。
+        </div>
+      </div>
+    </div>
+
+    <!-- 下方座位表區塊 -->
+    <div class="card p-4">
+      <div v-if="isLoading" class="text-center py-10">讀取中...</div>
+      <div v-else :style="gridStyle" class="grid gap-4">
+          <div v-for="i in (rows * cols)" :key="i"
+             @drop="onDrop($event, i-1)" @dragover.prevent @dragenter.prevent
+             class="border-2 border-dashed rounded-lg h-36 flex flex-col justify-center items-center relative"
+             :class="{'bg-slate-50 hover:border-sky-400': !seats[i-1], 'bg-sky-50 border-sky-200': seats[i-1]}">
+              
+              <div v-if="seats[i-1]" class="w-full h-full p-2 relative flex flex-col justify-center items-center text-center">
+                  <img :src="getPhotoUrl(seats[i-1])" @error="onImageError" class="w-16 h-16 object-cover rounded-full bg-gray-200 mb-2 border-2 border-white shadow">
+                  <p class="font-bold truncate text-slate-800">
+                    <span class="text-sky-600">{{ formatSeatNumber(seats[i-1].seat_number) }}.</span> {{ seats[i-1].name }}
+                  </p>
+                  <p class="text-gray-500 text-sm truncate">{{ seats[i-1].account }}</p>
+                  <button @click="removeStudentFromSeat(i-1)" class="absolute top-1 right-1 text-red-500 hover:text-red-700 bg-white rounded-full h-6 w-6 flex items-center justify-center shadow">✕</button>
+              </div>
+               <div v-else class="text-slate-400 text-sm">(空位)</div>
+          </div>
       </div>
     </div>
 
