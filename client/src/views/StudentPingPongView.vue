@@ -14,7 +14,7 @@
 
             <!-- 狀態一：加入房間 -->
             <div v-else-if="!session.joined" class="card p-8 transform transition-all hover:shadow-2xl duration-300">
-                <h1 class="text-3xl font-bold text-center text-sky-600 mb-2">加入 PingPong 活動</h1>
+                <h1 class="text-3xl font-bold text-center text-sky-600 mb-2">加入 即時問答 活動</h1>
                 <p class="text-center text-slate-500 mb-8">請輸入老師提供的房間代碼</p>
                 <form @submit.prevent="joinRoom" class="space-y-6">
                     <div>
@@ -232,12 +232,14 @@ onMounted(() => {
     const studentInfo = localStorage.getItem('studentInfo');
     if (studentInfo) form.name = JSON.parse(studentInfo).name;
     
-    socket.value = io("http://localhost:3000");
+    // *** 關鍵修正：移除寫死的 "http://localhost:3000" ***
+    // 這樣它會自動連接到提供網頁的伺服器 (也就是您電腦的 IP)
+    socket.value = io();
 
     socket.value.on('connect', () => console.log("成功連接到 Socket.IO 伺服器"));
     socket.value.on('question:started', (question) => { currentQuestion.value = question; submittedAnswer.value = false; shortAnswerText.value = ''; });
     
-    socket.value.on('question:ended', () => { 
+    socket.value.on('question:ended', (results) => { 
         const questionType = currentQuestion.value?.type;
         const correctAnswer = currentQuestion.value?.correctAnswer;
         let isCorrect = null;
@@ -273,6 +275,7 @@ onMounted(() => {
         }, 5000);
     });
 });
+
 
 onUnmounted(() => { if (socket.value) socket.value.disconnect(); });
 </script>

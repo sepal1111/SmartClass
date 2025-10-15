@@ -80,7 +80,7 @@
             <div class="relative flex justify-center text-sm"><span class="px-2 bg-white text-slate-500 text-base">或者</span></div>
           </div>
           <div class="mt-6">
-            <button @click="goToPingPong" class="w-full btn bg-teal-500 hover:bg-teal-600 text-xl py-4">加入 PingPong 活動</button>
+            <button @click="goToPingPong" class="w-full btn bg-teal-500 hover:bg-teal-600 text-xl py-4">加入 即時問答 活動</button>
           </div>
         </div>
 

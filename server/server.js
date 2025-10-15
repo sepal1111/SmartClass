@@ -248,8 +248,34 @@ app.delete('/api/students/:id', authenticateToken, (req, res) => {
 
 app.post('/api/students/import', authenticateToken, fileImportUpload.single('file'), (req, res) => { if (!req.file) return res.status(400).json({ error: '沒有上傳檔案。' }); try { const workbook = xlsx.read(req.file.buffer, { type: 'buffer' }); const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]); const insertStmt = db.prepare('INSERT OR IGNORE INTO students (student_id, name, class, seat_number, gender, account, password) VALUES (?, ?, ?, ?, ?, ?, ?)'); let importedCount = 0; db.transaction((students) => { for (const student of students) { const hashedPassword = bcrypt.hashSync(String(student['密碼'] || 'password123'), 10); const info = insertStmt.run(String(student['學號']||''), String(student['姓名']||''), String(student['班級']||''), Number(student['座號']||null), String(student['性別']||''), String(student['帳號']||''), hashedPassword); if (info.changes > 0) importedCount++; } })(data); res.json({ message: `成功匯入 ${importedCount} 筆新學生資料。重複的資料會被忽略。` }); } catch (error) { res.status(500).json({ error: '檔案處理失敗，請確認格式。' }); } });
 // --- 學生照片 API ---
-app.post('/api/students/photos/upload', authenticateToken, photoUpload.array('photos'), (req, res) => { if (!req.files || req.files.length === 0) return res.status(400).json({ error: '沒有上傳任何照片檔案。' }); try { const allStudents = db.prepare('SELECT student_id FROM students').all(); const studentIdSet = new Set(allStudents.map(s => s.student_id)); let successCount = 0; const failedFiles = []; req.files.forEach(file => { const originalFileExtension = path.extname(file.originalname); const studentId = path.basename(file.originalname, originalFileExtension); const lowerCaseExtension = originalFileExtension.toLowerCase(); if (studentIdSet.has(studentId) && ['.jpg', '.jpeg', '.png'].includes(lowerCaseExtension)) { ['.jpg', '.jpeg', '.png'].forEach(ext => { const oldPath = path.join(photosDirectory, studentId + ext); if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); }); const newFilename = studentId + lowerCaseExtension; const newPath = path.join(photosDirectory, newFilename); fs.writeFileSync(newPath, file.buffer); successCount++; } else { failedFiles.push(file.originalname); } }); let message = `成功上傳 ${successCount} 張照片。`; if (failedFiles.length > 0) message += ` ${failedFiles.length} 個檔案無法對應學生學號或格式不符：${failedFiles.join(', ')}`; res.json({ message }); } catch (error) { res.status(500).json({ error: '處理照片上傳時發生伺服器錯誤。' }); } });
+app.post('/api/students/photos/upload', authenticateToken, photoUpload.array('photos'), (req, res) => { if (!req.files || req.files.length === 0) return res.status(400).json({ error: '沒有上傳任何照片檔案。' }); try { const allStudents = db.prepare('SELECT student_id FROM students').all(); const studentIdSet = new Set(allStudents.map(s => s.student_id)); let successCount = 0; const failedFiles = []; req.files.forEach(file => { 
+        const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+
+        const originalFileExtension = path.extname(originalName);
+        
+        // *** 關鍵修正：正確解析包含底線與姓名的檔案 ***
+        // 舊的邏輯會把 '109014_薛兆廷' 當作整個檔名
+        // const studentId_old = path.basename(originalName, originalFileExtension);
+        
+        // 新的邏輯：只取 '_' 前面的部分作為學號
+        const baseName = path.basename(originalName, originalFileExtension);
+        const studentId = baseName.split('_')[0];
+        
+        const lowerCaseExtension = originalFileExtension.toLowerCase(); 
+        
+        if (studentIdSet.has(studentId) && ['.jpg', '.jpeg', '.png'].includes(lowerCaseExtension)) { 
+            // 刪除同名但不同副檔名的舊照片
+            ['.jpg', '.jpeg', '.png'].forEach(ext => { const oldPath = path.join(photosDirectory, studentId + ext); if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); }); 
+            const newFilename = studentId + lowerCaseExtension; 
+            const newPath = path.join(photosDirectory, newFilename); 
+            fs.writeFileSync(newPath, file.buffer); 
+            successCount++; 
+        } else { 
+            failedFiles.push(originalName); 
+        } 
+    }); let message = `成功上傳 ${successCount} 張照片。`; if (failedFiles.length > 0) message += ` ${failedFiles.length} 個檔案無法對應學生學號或格式不符：${failedFiles.join(', ')}`; res.json({ message }); } catch (error) { console.error("照片上傳失敗:", error); res.status(500).json({ error: '處理照片上傳時發生伺服器錯誤。' }); } });
 app.get('/api/students/photos', authenticateToken, (req, res) => { try { res.json(fs.readdirSync(photosDirectory)); } catch (error) { res.status(500).json({ error: '無法讀取照片列表。' }); } });
+
 
 // --- 學生端專用 API ---
 app.get('/api/student/assignments', authenticateToken, (req, res) => {
@@ -875,12 +901,12 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
     const serverUrl = `http://${HOST}:${PORT}`;
     const colors = { reset: "\x1b[0m", bright: "\x1b[1m", fg: { green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m" } };
+    console.log(`\n${colors.bright}${colors.fg.green}${colors.reset}`);    
     console.log(`\n${colors.bright}${colors.fg.green}後端伺服器正在 ${serverUrl} 運行${colors.reset}`);
-    console.log(`${colors.fg.yellow}學生端請連線至此網址，或掃描老師主畫面上的 QR Code${colors.reset}`);
-    console.log(`${colors.fg.red}${colors.reset}\n`);
-    console.log(`${colors.fg.green}這個視窗是顯示伺服器運行的狀態，請勿關閉！${colors.reset}\n`);
-    console.log(`${colors.fg.red}${colors.reset}\n`);
-    console.log(`${colors.fg.red}課程結束後，關閉此視窗，伺服器與網站即停止運作！${colors.reset}\n`);
+    console.log(`\n${colors.bright}${colors.fg.green}${colors.reset}`);   
+    console.log(`\n${colors.bright}${colors.fg.yellow}學生端請連線至此網址，或掃描老師主畫面上的 QR Code${colors.reset}`);
+    console.log(`\n${colors.bright}${colors.fg.green}${colors.reset}`);   
+    console.log(`\n${colors.bright}${colors.fg.red}這個視窗是顯示伺服器運行的狀態，課程結束後請再關閉此視窗！${colors.reset}\n`);
     if (isPkg) { open(serverUrl); }
 });
 
@@ -889,4 +915,5 @@ app.get('*', (req, res) => {
   const indexPath = isPkg ? path.join(baseDir, 'dist', 'index.html') : path.join(__dirname, '..', 'client', 'dist', 'index.html');
   res.sendFile(indexPath);
 });
+
 
