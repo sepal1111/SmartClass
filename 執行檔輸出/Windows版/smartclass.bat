@@ -1,0 +1,4 @@
+@echo off 
+echo æ­?œ¨?Ÿå??ºæ…§?­ç?ä¼ºæ???.. 
+cd /d %~dp0\bin 
+start smart-class.exe 

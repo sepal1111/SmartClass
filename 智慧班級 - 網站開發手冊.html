@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧班級－開發說明文件</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow: hidden;
+        }
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+            transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+        .slide-content {
+            max-width: 1000px;
+            width: 100%;
+        }
+        ul {
+            list-style-position: inside;
+        }
+        li {
+            margin-bottom: 1rem;
+        }
+        code {
+            background-color: #1e293b; /* slate-800 */
+            color: #f8fafc; /* slate-50 */
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+        }
+        /* Style for the preformatted text block */
+        pre {
+            white-space: pre;
+            text-align: left;
+            font-size: 0.8rem; /* Smaller font for better fit */
+            line-height: 1.5;
+            max-height: 60vh; /* Make it scrollable if too long */
+            overflow: auto;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white">
+
+    <!-- 投影片容器 -->
+    <main id="presentation-container">
+        <!-- Slide 1: 標題頁 -->
+        <div class="slide active">
+            <div class="slide-content text-center">
+                <h1 class="text-7xl font-black text-purple-400 tracking-wider">智慧班級</h1>
+                <p class="text-4xl font-bold text-slate-200 mt-4">開發說明文件</p>
+                <p class="text-slate-400 mt-12 text-lg">使用鍵盤左右鍵或點擊下方按鈕進行導覽</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: 專案概述 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-8 border-b-4 border-yellow-400 pb-4">1. 專案概述</h2>
+                <p class="text-2xl text-slate-300 leading-relaxed">
+                    「智慧班級」是一個前後端分離的 Web 應用程式，專為單一班級的教學環境設計。它透過 Node.js 執行檔在教師的電腦上運行一個本地伺服器，學生則可透過區域網路內的行動裝置連線參與互動。專案的核心目標是將班級管理、教學互動與日常作業管理整合在單一平台中。
+                </p>
+            </div>
+        </div>
+        
+        <!-- Slide 3: 技術棧 -->
+        <div class="slide">
+             <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-8 border-b-4 border-yellow-400 pb-4">2. 技術棧 (Tech Stack)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-xl">
+                    <div class="bg-slate-800 p-8 rounded-lg">
+                        <h3 class="text-3xl font-bold text-sky-400 mb-4">後端 (Backend)</h3>
+                        <ul class="text-slate-300 space-y-3 list-disc">
+                            <li>執行環境: <code>Node.js (v18.x)</code></li>
+                            <li>框架: <code>Express.js</code></li>
+                            <li>資料庫: <code>better-sqlite3</code></li>
+                            <li>即時通訊: <code>Socket.IO</code></li>
+                            <li>認證: <code>JWT</code></li>
+                            <li>封裝: <code>PKG</code></li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-800 p-8 rounded-lg">
+                        <h3 class="text-3xl font-bold text-green-400 mb-4">前端 (Frontend)</h3>
+                        <ul class="text-slate-300 space-y-3 list-disc">
+                            <li>框架: <code>Vue.js 3</code> (Composition API)</li>
+                            <li>建置工具: <code>Vite</code></li>
+                            <li>路由: <code>Vue Router</code></li>
+                            <li>樣式: <code>Tailwind CSS</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 開發環境 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-8 border-b-4 border-yellow-400 pb-4">3. 開發環境設定</h2>
+                <ol class="text-2xl text-slate-300 space-y-6 list-decimal">
+                    <li><span class="font-bold text-sky-400">安裝 Node.js v18：</span> 建議使用 <code>nvm</code> 來管理版本 (<code>nvm install 18 && nvm use 18</code>)。</li>
+                    <li><span class="font-bold text-sky-400">安裝依賴套件：</span> 分別在 <code>client</code> 和 <code>server</code> 目錄下執行 <code>npm install</code>。</li>
+                    <li><span class="font-bold text-sky-400">啟動後端：</span> 在 <code>server</code> 目錄下執行 <code>npm run dev</code>。</li>
+                    <li><span class="font-bold text-sky-400">啟動前端：</span> 在 <code>client</code> 目錄下執行 <code>npm run dev</code>。</li>
+                </ol>
+            </div>
+        </div>
+        
+        <!-- Slide 5: 核心邏輯 - 認證 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">4. 核心邏輯</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">認證流程 (Authentication)</h3>
+                <p class="text-2xl text-slate-300 leading-relaxed">
+                    系統採用 <span class="font-bold text-yellow-300">JWT (JSON Web Tokens)</span> 進行無狀態認證。登入成功後，後端簽發一個有時效性的 Token，前端將其儲存在 `localStorage`。之後的每次 API 請求，都會透過 `Authorization` 標頭將 Token 送回後端進行驗證。
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 6: 核心邏輯 - 即時通訊 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">4. 核心邏輯</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">即時通訊 (Socket.IO)</h3>
+                 <p class="text-2xl text-slate-300 leading-relaxed">
+                    <code>PingPong</code> 和 <code>QuizRace</code> 功能高度依賴 Socket.IO。後端透過 <span class="font-bold text-yellow-300">Rooms</span> 機制來隔離不同的活動房間，並透過 <span class="font-bold text-yellow-300">事件驅動 (Event-driven)</span> 的方式與前端溝通。所有遊戲狀態都在後端管理，前端僅作為畫面的呈現與事件的觸發器。
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 7: 核心邏輯 - 封裝 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">4. 核心邏輯</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">封裝與部署 (Packaging)</h3>
+                <p class="text-2xl text-slate-300 leading-relaxed">
+                    透過根目錄的 <code>build.bat</code> (Windows) 或 <code>build.sh</code> (macOS) 腳本，使用 <span class="font-bold text-yellow-300">PKG</span> 工具將整個 Node.js 後端應用打包成一個單一執行檔。腳本會自動處理前端建置、原生模組複製 (`.node` 檔案)，並產生一個方便啟動的快捷方式。
+                </p>
+            </div>
+        </div>
+        
+        <!-- Slide 8: 檔案結構 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-8 border-b-4 border-yellow-400 pb-4">附錄：檔案結構</h2>
+                <pre class="bg-slate-800 p-4 rounded-lg overflow-x-auto text-sm"><code>smartclass/
+├── build.bat               # Windows 環境下的一鍵封裝腳本
+├── build.sh                # macOS/Linux 環境下的一鍵封裝腳本
+├── client/                 # 前端應用程式 (Vue.js)
+│   ├── index.html          # 前端應用程式的 HTML 主入口，掛載 Vue 應用
+│   ├── package.json        # 前端專案的依賴與腳本設定檔
+│   ├── postcss.config.js   # PostCSS 的設定檔，主要用於載入 Tailwind CSS
+│   ├── tailwind.config.js  # Tailwind CSS 的設定檔，可自訂樣式主題
+│   ├── vite.config.js      # Vite 建置工具的設定檔，包含開發伺服器代理等重要設定
+│   └── src/                # 前端原始碼
+│       ├── assets/         # 靜態資源/樣式
+│       │   ├── main.css    # Tailwind CSS 的主要引入點
+│       │   └── style.css   # 全域自定義 CSS 樣式
+│       ├── router/         # 路由配置
+│       │   └── index.js    # Vue Router 的設定檔，定義所有頁面路由與導航守衛
+│       ├── utils/          # 通用工具
+│       │   └── api.js      # 封裝 fetch API，統一處理認證 Token
+│       ├── views/          # 頁面組件 (Views)
+│       │   ├── AssignmentsView.vue          # 教師端「作業管理」頁面
+│       │   ├── AuthView.vue                 # 統一的登入/註冊入口頁面
+│       │   ├── ClassroomDashboardView.vue   # 教師端「課堂儀表板」頁面
+│       │   ├── GradeManagementView.vue      # 教師端「成績管理」頁面
+│       │   ├── HomeView.vue                 # 教師登入後的首頁
+│       │   ├── QuizGameStudent.vue          # 學生端「搶答競賽」遊戲介面
+│       │   ├── QuizGameTeacher.vue          # 教師端「搶答競賽」主持介面
+│       │   ├── QuizManagerView.vue          # 教師端「搶答競賽」題庫管理頁面
+│       │   ├── SeatingChartView.vue         # 教師端「座位表設定」頁面
+│       │   ├── StudentDashboardView.vue     # 學生登入後的儀表板頁面
+│       │   ├── StudentManagementView.vue    # 教師端「學生管理」頁面
+│       │   ├── StudentPingPongView.vue      # 學生端「PingPong」即時問答介面
+│       │   └── TeacherPingPongView.vue      # 教師端「PingPong」即時問答主持介面
+│       ├── App.vue         # Vue 應用的根組件，管理整體佈局與認證狀態
+│       └── main.js         # 前端應用程式的主入口點，初始化 Vue 與路由
+└── server/                 # 後端應用程式 (Node.js)
+    ├── database.js         # 後端資料庫模組，負責初始化 SQLite 資料庫與資料表結構
+    ├── package.json        # 後端專案的依賴與腳本設定檔
+    └── server.js           # 後端主程式，包含 Express 伺服器、API 端點與 Socket.IO 邏輯</code></pre>
+            </div>
+        </div>
+
+        <!-- Slide 9: 結束頁 -->
+        <div class="slide">
+            <div class="slide-content text-center">
+                <h2 class="text-6xl font-bold text-slate-200">簡報結束</h2>
+                <p class="text-3xl text-purple-400 mt-4">感謝您的閱讀！</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- 導覽控制 -->
+    <footer class="fixed bottom-0 left-0 right-0 p-4 bg-slate-900 bg-opacity-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <button id="prev-btn" class="px-6 py-3 rounded-lg bg-purple-500 text-white font-bold hover:bg-purple-600 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">上一頁</button>
+            <div class="flex-grow mx-4">
+                <div class="w-full bg-slate-700 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-yellow-400 h-2.5 rounded-full transition-all duration-300"></div>
+                </div>
+            </div>
+            <button id="next-btn" class="px-6 py-3 rounded-lg bg-purple-500 text-white font-bold hover:bg-purple-600 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">下一頁</button>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const progressBar = document.getElementById('progress-bar');
+            let currentSlide = 0;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                
+                const progressPercentage = ((index) / (slides.length - 1)) * 100;
+                progressBar.style.width = `${progressPercentage}%`;
+
+                prevBtn.disabled = index === 0;
+                nextBtn.disabled = index === slides.length - 1;
+            }
+
+            function next() {
+                if (currentSlide < slides.length - 1) {
+                    currentSlide++;
+                    showSlide(currentSlide);
+                }
+            }
+
+            function prev() {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    showSlide(currentSlide);
+                }
+            }
+
+            nextBtn.addEventListener('click', next);
+            prevBtn.addEventListener('click', prev);
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === ' ') {
+                    next();
+                } else if (e.key === 'ArrowLeft') {
+                    prev();
+                }
+            });
+
+            showSlide(currentSlide);
+        });
+    </script>
+</body>
+</html>
+

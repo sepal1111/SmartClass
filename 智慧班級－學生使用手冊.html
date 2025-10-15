@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧班級－學生使用手冊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow: hidden;
+        }
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+            transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+        .slide-content {
+            max-width: 1000px;
+            width: 100%;
+        }
+        ul {
+            list-style-position: inside;
+        }
+        li {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white">
+
+    <!-- 投影片容器 -->
+    <main id="presentation-container">
+        <!-- Slide 1: 標題頁 -->
+        <div class="slide active">
+            <div class="slide-content text-center">
+                <h1 class="text-7xl font-black text-green-400 tracking-wider">智慧班級</h1>
+                <p class="text-4xl font-bold text-slate-200 mt-4">學生使用手冊</p>
+                <p class="text-slate-400 mt-12 text-lg">使用鍵盤左右鍵或點擊下方按鈕進行導覽</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: 如何連線 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-8 border-b-4 border-yellow-400 pb-4">1. 如何連線與登入</h2>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">取得連線位址：</span> 請老師啟動伺服器後，提供一組 IP 位址 (例如 `http://192.168.1.100:3000`)。</li>
+                    <li><span class="font-bold text-sky-400">使用瀏覽器開啟：</span> 在您的手機、平板或電腦的瀏覽器中，輸入老師提供的網址。</li>
+                    <li><span class="font-bold text-sky-400">選擇「學生登入」：</span> 輸入老師為您建立的個人帳號與密碼。</li>
+                    <li><span class="font-bold text-green-400">成功登入：</span> 登入後，您會看到您的個人儀表板。</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Slide 3: 學生儀表板 -->
+        <div class="slide">
+             <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-8 border-b-4 border-yellow-400 pb-4">2. 學生儀表板功能</h2>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">查看作業：</span> 儀表板會列出所有老師指派的作業、說明與截止日期。</li>
+                    <li><span class="font-bold text-sky-400">繳交作業：</span> 點擊「選擇檔案上傳」按鈕，選擇您要繳交的檔案並確認送出。</li>
+                    <li><span class="font-bold text-sky-400">修改密碼：</span> 點擊右上角的「修改密碼」按鈕，即可變更您的個人密碼。</li>
+                    <li><span class="font-bold text-sky-400">登出系統：</span> 點擊「登出」按鈕，安全地離開系統。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 4: 參與課堂活動 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">3. 參與課堂活動</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">PingPong & 搶答競賽</h3>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">點擊按鈕加入：</span> 在儀表板上點擊「加入 PingPong」或「加入搶答競賽」。</li>
+                    <li><span class="font-bold text-sky-400">輸入房間代碼：</span> 輸入老師在課堂上顯示的 6 位數字房間代碼。</li>
+                    <li><span class="font-bold text-sky-400">輸入您的名字：</span> 讓老師知道是誰加入了活動。</li>
+                    <li><span class="font-bold text-green-400">開始互動：</span> 成功加入後，請依照老師的指示與畫面上的題目進行作答！</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Slide 5: 結束頁 -->
+        <div class="slide">
+            <div class="slide-content text-center">
+                <h2 class="text-6xl font-bold text-slate-200">簡報結束</h2>
+                <p class="text-3xl text-green-400 mt-4">祝您學習愉快！</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- 導覽控制 -->
+    <footer class="fixed bottom-0 left-0 right-0 p-4 bg-slate-900 bg-opacity-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <button id="prev-btn" class="px-6 py-3 rounded-lg bg-green-500 text-white font-bold hover:bg-green-600 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">上一頁</button>
+            <div class="flex-grow mx-4">
+                <div class="w-full bg-slate-700 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-yellow-400 h-2.5 rounded-full transition-all duration-300"></div>
+                </div>
+            </div>
+            <button id="next-btn" class="px-6 py-3 rounded-lg bg-green-500 text-white font-bold hover:bg-green-600 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">下一頁</button>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const progressBar = document.getElementById('progress-bar');
+            let currentSlide = 0;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                
+                const progressPercentage = ((index) / (slides.length - 1)) * 100;
+                progressBar.style.width = `${progressPercentage}%`;
+
+                prevBtn.disabled = index === 0;
+                nextBtn.disabled = index === slides.length - 1;
+            }
+
+            function next() {
+                if (currentSlide < slides.length - 1) {
+                    currentSlide++;
+                    showSlide(currentSlide);
+                }
+            }
+
+            function prev() {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    showSlide(currentSlide);
+                }
+            }
+
+            nextBtn.addEventListener('click', next);
+            prevBtn.addEventListener('click', prev);
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === ' ') {
+                    next();
+                } else if (e.key === 'ArrowLeft') {
+                    prev();
+                }
+            });
+
+            showSlide(currentSlide);
+        });
+    </script>
+</body>
+</html>

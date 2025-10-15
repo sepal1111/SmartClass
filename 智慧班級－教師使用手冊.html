@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧班級－教師使用手冊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow: hidden; /* 隱藏滾動條 */
+        }
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+            transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+        .slide-content {
+            max-width: 1000px;
+            width: 100%;
+        }
+        ul {
+            list-style-position: inside;
+        }
+        li {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white">
+
+    <!-- 投影片容器 -->
+    <main id="presentation-container">
+        <!-- Slide 1: 標題頁 -->
+        <div class="slide active">
+            <div class="slide-content text-center">
+                <h1 class="text-7xl font-black text-sky-400 tracking-wider">智慧班級</h1>
+                <p class="text-4xl font-bold text-slate-200 mt-4">教師使用手冊</p>
+                <p class="text-slate-400 mt-12 text-lg">使用鍵盤左右鍵或點擊下方按鈕進行導覽</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: 首次啟動 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-8 border-b-4 border-yellow-400 pb-4">1. 首次啟動與帳號設定</h2>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">執行啟動檔：</span> 雙擊 `smartclass.bat` (Windows) 或 `smartclass.command` (macOS)。</li>
+                    <li><span class="font-bold text-sky-400">註冊管理員：</span> 系統會引導您建立第一位教師帳號。</li>
+                    <li><span class="font-bold text-red-400">務必記下密碼：</span> 這是您登入系統的唯一憑證。</li>
+                    <li><span class="font-bold text-sky-400">完成設定：</span> 建立成功後，將自動跳轉至登入頁面。</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Slide 3: 登入系統 -->
+        <div class="slide">
+             <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-8 border-b-4 border-yellow-400 pb-4">2. 登入系統</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-2xl">
+                    <div class="bg-slate-800 p-8 rounded-lg">
+                        <h3 class="text-3xl font-bold text-sky-400 mb-4">教師登入</h3>
+                        <p class="text-slate-300">選擇「教師登入」，輸入您註冊的帳號與密碼即可進入管理後台。</p>
+                    </div>
+                    <div class="bg-slate-800 p-8 rounded-lg">
+                        <h3 class="text-3xl font-bold text-green-400 mb-4">學生登入</h3>
+                        <p class="text-slate-300">選擇「學生登入」，輸入由您為他們建立的個人帳號與密碼。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 學生管理 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">3. 核心功能</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">學生管理</h3>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">個別新增：</span> 手動輸入單一學生的詳細資料。</li>
+                    <li><span class="font-bold text-sky-400">批次匯入：</span> 下載 Excel 範本，填寫後一次性大量匯入全班名單。</li>
+                    <li><span class="font-bold text-sky-400">上傳照片：</span> 批次上傳學生照片，檔名需以**學號**開頭 (e.g., `11001.jpg`, `11002_王小明.png`)。</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Slide 5: 座位表 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">3. 核心功能</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">座位表設定</h3>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">視覺化編排：</span> 使用滑鼠拖放學生卡片到指定座位。</li>
+                    <li><span class="font-bold text-sky-400">自訂尺寸：</span> 自由調整座位表的行數與列數以符合教室佈局。</li>
+                    <li><span class="font-bold text-sky-400">一鍵自動排列：</span> 系統可根據座號自動將所有學生填入座位。</li>
+                    <li><span class="font-bold text-red-400">務必儲存：</span> 完成後點擊儲存，設定才會在「課堂儀表板」生效。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 6: 課堂儀表板 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">3. 核心功能</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">課堂儀表板</h3>
+                 <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">主要互動畫面：</span> 上課時的核心介面，同步顯示您設定的座位表。</li>
+                    <li><span class="font-bold text-sky-400">快速點名：</span> 透過「批次登記」功能，快速記錄全班學生的出缺席狀況。</li>
+                    <li><span class="font-bold text-sky-400">課堂加分：</span> 點擊任一**出席**的學生卡片，即可為其增加或減少課堂表現分數。</li>
+                    <li><span class="font-bold text-sky-400">隨機抽籤：</span> 從所有出席的學生中，隨機抽取一位進行互動。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 7: 成績管理 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">3. 核心功能</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">成績管理</h3>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">科目設定：</span> 建立班級的教學科目，作為成績分類的基礎。</li>
+                    <li><span class="font-bold text-sky-400">建立評量：</span> 為各科目新增成績項目，如「第一次月考」、「單元小考」等。</li>
+                    <li><span class="font-bold text-sky-400">快速登錄：</span> 點擊成績項目即可進入全班成績登錄頁面，快速輸入分數。</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Slide 8: 作業管理 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">3. 核心功能</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">作業管理</h3>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">指派作業：</span> 建立作業項目，可設定標題、說明、科目與截止日期。</li>
+                    <li><span class="font-bold text-sky-400">追蹤繳交：</span> 點擊「查看繳交」即可看到已繳交學生名單，遲交者會被特別標記。</li>
+                    <li><span class="font-bold text-sky-400">線上預覽：</span> 直接在瀏覽器中以全螢幕燈箱預覽圖片、影片、PDF 及 Office 文件。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 9: PingPong -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">3. 核心功能</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">PingPong 即時問答</h3>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">快速反饋：</span> 適合課堂中的快速提問、意見調查與腦力激盪。</li>
+                    <li><span class="font-bold text-sky-400">多樣題型：</span> 支援選擇、是非、簡答及**繪圖題**。</li>
+                    <li><span class="font-bold text-sky-400">即時結果：</span> 停止作答後，可立即看到所有學生的回答內容與統計圖表。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 10: QuizRace -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-2">3. 核心功能</h2>
+                <h3 class="text-3xl font-semibold text-sky-400 mb-8 border-b-4 border-yellow-400 pb-4">搶答競賽 (QuizRace)</h3>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">遊戲化測驗：</span> 將傳統測驗轉化為刺激的計分競賽。</li>
+                    <li><span class="font-bold text-sky-400">建立題庫：</span> 可手動新增題目，或使用 Excel 範本一次性大量匯入。</li>
+                    <li><span class="font-bold text-sky-400">自動計分與排名：</span> 系統會根據答題速度與正確性自動計分，並在每題結束後顯示即時排行榜。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 11: 封裝部署 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="text-5xl font-bold text-yellow-400 mb-8 border-b-4 border-yellow-400 pb-4">4. 封裝與部署</h2>
+                <ul class="text-2xl text-slate-300 space-y-6">
+                    <li><span class="font-bold text-sky-400">一鍵封裝：</span> 執行專案根目錄下的 `build.bat` 或 `build.sh` 腳本。</li>
+                    <li><span class="font-bold text-sky-400">產生發行版：</span> 腳本會自動產生一個名為 `release` 的資料夾。</li>
+                    <li><span class="font-bold text-sky-400">輕鬆分享：</span> 將整個 `release` 資料夾複製到任何電腦上，即可執行，無需額外安裝 Node.js。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 12: 結束頁 -->
+        <div class="slide">
+            <div class="slide-content text-center">
+                <h2 class="text-6xl font-bold text-slate-200">簡報結束</h2>
+                <p class="text-3xl text-sky-400 mt-4">感謝您的閱讀！</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- 導覽控制 -->
+    <footer class="fixed bottom-0 left-0 right-0 p-4 bg-slate-900 bg-opacity-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <button id="prev-btn" class="px-6 py-3 rounded-lg bg-sky-500 text-white font-bold hover:bg-sky-600 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">上一頁</button>
+            <div class="flex-grow mx-4">
+                <div class="w-full bg-slate-700 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-yellow-400 h-2.5 rounded-full transition-all duration-300"></div>
+                </div>
+            </div>
+            <button id="next-btn" class="px-6 py-3 rounded-lg bg-sky-500 text-white font-bold hover:bg-sky-600 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">下一頁</button>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const progressBar = document.getElementById('progress-bar');
+            let currentSlide = 0;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                
+                // 更新進度條
+                const progressPercentage = ((index) / (slides.length - 1)) * 100;
+                progressBar.style.width = `${progressPercentage}%`;
+
+                // 更新按鈕狀態
+                prevBtn.disabled = index === 0;
+                nextBtn.disabled = index === slides.length - 1;
+            }
+
+            function next() {
+                if (currentSlide < slides.length - 1) {
+                    currentSlide++;
+                    showSlide(currentSlide);
+                }
+            }
+
+            function prev() {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    showSlide(currentSlide);
+                }
+            }
+
+            // 事件監聽
+            nextBtn.addEventListener('click', next);
+            prevBtn.addEventListener('click', prev);
+            
+            // 鍵盤導覽
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === ' ') {
+                    next();
+                } else if (e.key === 'ArrowLeft') {
+                    prev();
+                }
+            });
+
+            // 初始顯示
+            showSlide(currentSlide);
+        });
+    </script>
+</body>
+</html>

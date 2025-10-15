@@ -1,4 +1,7 @@
 @echo off
+rem *** 關鍵修正：切換命令提示字元的代碼頁至 UTF-8 (65001) 以正確顯示中文 ***
+chcp 65001 > nul
+
 echo 正在開始 SmartClass Windows 版本的建置與封裝程序...
 echo 重要：請確保您在 Node.js v18 環境下執行此腳本。
 echo.
@@ -84,7 +87,6 @@ echo.
 echo [7/7] 正在複製前端建置檔案、建立資料夾並建立啟動器...
 xcopy "client\dist" "release\bin\dist\" /E /I /Y /Q
 
-rem *** 關鍵修正：不在複製開發資料，僅在 bin 目錄下建立空的資料夾 ***
 rem 執行檔首次啟動時，database.js 會自動在 bin 目錄下建立 data 資料夾與資料庫檔案。
 if not exist "release\bin\uploads" mkdir "release\bin\uploads"
 if not exist "release\bin\photos" mkdir "release\bin\photos"
